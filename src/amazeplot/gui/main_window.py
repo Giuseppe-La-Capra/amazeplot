@@ -2,7 +2,7 @@
 
 The window is a thin *controller*: it forwards user actions to the
 :class:`~amazeplot.core.session.DataSession` and redraws every view when
-the session notifies a change. It contains no pandas logic.
+the session notifies a change. It contains no pandas or plotting logic.
 """
 
 from __future__ import annotations
@@ -18,9 +18,11 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QTableView,
+    QTabWidget,
     QWidget,
 )
 
+from amazeplot.core.action import Action, Params
 from amazeplot.core.codegen import generate_script
 from amazeplot.core.errors import AmazeplotError
 from amazeplot.core.io import (
@@ -30,15 +32,19 @@ from amazeplot.core.io import (
     save_dataframe,
 )
 from amazeplot.core.operation import Operation
-from amazeplot.core.registry import OperationRegistry
+from amazeplot.core.plotting import PlotCall
+from amazeplot.core.registry import ActionRegistry
 from amazeplot.core.session import DataSession
+from amazeplot.gui.action_dialog import ActionDialog, ApplyCallback
+from amazeplot.gui.actions_panel import ActionsPanel
 from amazeplot.gui.dataframe_model import DataFrameModel
 from amazeplot.gui.history_panel import HistoryPanel
-from amazeplot.gui.operation_dialog import OperationDialog
-from amazeplot.gui.operations_panel import OperationsPanel
+from amazeplot.gui.plot_panel import PlotPanel
 
 APP_NAME = "amazeplot"
-_DEFAULT_SIZE = (1200, 750)
+DATA_TAB = "Data"
+PLOT_TAB = "Plot"
+_DEFAULT_SIZE = (1280, 800)
 
 
 def _file_filter(extensions: tuple[str, ...]) -> str:
@@ -48,14 +54,14 @@ def _file_filter(extensions: tuple[str, ...]) -> str:
 
 
 class MainWindow(QMainWindow):
-    """Main window: table in the centre, operations and history docked.
+    """Main window: data and plot tabs, toolbox and history docked.
 
     Parameters
     ----------
     session : DataSession
         The session edited by this window.
-    registry : OperationRegistry
-        The operations offered to the user.
+    registry : ActionRegistry
+        The data operations and plot calls offered in the toolbox.
     parent : QWidget, optional
         Parent widget.
     """
@@ -63,7 +69,7 @@ class MainWindow(QMainWindow):
     def __init__(
         self,
         session: DataSession,
-        registry: OperationRegistry,
+        registry: ActionRegistry,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -73,14 +79,22 @@ class MainWindow(QMainWindow):
         self._table = QTableView()
         self._table.setModel(self._model)
         self._table.setAlternatingRowColors(True)
-        self.setCentralWidget(self._table)
 
-        self.operations_panel = OperationsPanel(registry)
-        self.operations_panel.operation_requested.connect(
-            self.request_operation
+        self.plot_panel = PlotPanel()
+        self.plot_panel.remove_layer_requested.connect(
+            self._session.remove_layer
         )
+        self.plot_panel.clear_requested.connect(self._session.clear_layers)
+
+        self._tabs = QTabWidget()
+        self._tabs.addTab(self._table, DATA_TAB)
+        self._tabs.addTab(self.plot_panel, PLOT_TAB)
+        self.setCentralWidget(self._tabs)
+
+        self.actions_panel = ActionsPanel(registry)
+        self.actions_panel.action_requested.connect(self.request_action)
         self.history_panel = HistoryPanel()
-        self._add_dock("Operations", self.operations_panel, left=True)
+        self._add_dock("Toolbox", self.actions_panel, left=True)
         self._add_dock("History", self.history_panel, left=False)
 
         self._shape_label = QLabel()
@@ -116,30 +130,32 @@ class MainWindow(QMainWindow):
         self._session.load(frame, source)
         return True
 
-    def create_operation_dialog(self, operation: Operation) -> OperationDialog:
-        """Return a dialog configuring ``operation`` on the current data."""
+    def current_tab(self) -> str:
+        """Return the title of the visible central tab."""
+        return self._tabs.tabText(self._tabs.currentIndex())
+
+    def create_action_dialog(self, action: Action) -> ActionDialog:
+        """Return a dialog configuring ``action`` on the current data."""
         frame = self._session.frame
         columns = [] if frame is None else frame.columns.tolist()
-        return OperationDialog(
-            operation,
-            columns,
-            lambda params: self._session.apply(operation, params),
-            self,
+        return ActionDialog(
+            action, columns, self._apply_callback(action), self
         )
 
-    def request_operation(self, operation: Operation) -> None:
-        """Ask the user for parameters and apply ``operation``."""
+    def request_action(self, action: Action) -> None:
+        """Ask the user for parameters and perform ``action``."""
         if not self._session.has_data:
             self._show_error(
-                operation.label, "Open a data file before applying operations."
+                action.label, "Open a data file before using the toolbox."
             )
             return
-        self.create_operation_dialog(operation).exec()
+        self.create_action_dialog(action).exec()
 
     def refresh(self) -> None:
         """Redraw every view from the session state."""
         frame = self._session.frame
         self._model.set_frame(frame)
+        self.plot_panel.show_plot(frame, self._session.layers)
         self.history_panel.set_history(
             self._session.steps, generate_script(self._session)
         )
@@ -225,6 +241,25 @@ class MainWindow(QMainWindow):
         )
         if path:
             self.open_file(path)
+
+    def _apply_callback(self, action: Action) -> ApplyCallback:
+        """Return how ``action`` changes the session, by action type.
+
+        Data operations add a step and show the table; plot calls add a
+        layer and show the figure.
+        """
+        if isinstance(action, Operation):
+            apply, tab = self._session.apply, self._table
+        elif isinstance(action, PlotCall):
+            apply, tab = self._session.add_layer, self.plot_panel
+        else:
+            raise TypeError(f"Unsupported action type {type(action)!r}")
+
+        def callback(params: Params) -> None:
+            apply(action, params)
+            self._tabs.setCurrentWidget(tab)
+
+        return callback
 
     def _on_undo(self) -> None:
         if self._session.can_undo:

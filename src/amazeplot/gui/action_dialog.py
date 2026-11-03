@@ -1,4 +1,4 @@
-"""Dialog that collects the parameters of one operation."""
+"""Dialog that collects the parameters of one action."""
 
 from __future__ import annotations
 
@@ -15,29 +15,29 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from amazeplot.core.errors import OperationError
-from amazeplot.core.operation import Operation
+from amazeplot.core.action import Action
+from amazeplot.core.errors import ActionError
 from amazeplot.gui.parameter_editors import ParameterEditor, create_editor
 
 ApplyCallback = Callable[[Mapping[str, Any]], object]
-"""Called with the entered values; raises ``OperationError`` on failure."""
+"""Called with the entered values; raises ``ActionError`` on failure."""
 
 _ERROR_STYLE = "color: #c62828;"
 _REQUIRED_MARKER = " *"
 
 
-class OperationDialog(QDialog):
-    """Form generated from :attr:`Operation.parameters`.
+class ActionDialog(QDialog):
+    """Form generated from :attr:`Action.parameters`.
 
-    While the user types, the dialog shows the pandas code that will run.
-    Pressing *OK* calls ``apply_callback``; if it raises
-    :class:`OperationError` the message is shown and the dialog stays
-    open so the user can fix the input.
+    While the user types, the dialog shows the pandas or matplotlib code
+    that will run. Pressing *OK* calls ``apply_callback``; if it raises
+    :class:`ActionError` the message is shown and the dialog stays open
+    so the user can fix the input.
 
     Parameters
     ----------
-    operation : Operation
-        The operation to configure.
+    action : Action
+        The data operation or plot call to configure.
     columns : Sequence of Hashable
         Column labels of the current DataFrame.
     apply_callback : callable
@@ -48,27 +48,27 @@ class OperationDialog(QDialog):
 
     def __init__(
         self,
-        operation: Operation,
+        action: Action,
         columns: Sequence[Hashable],
         apply_callback: ApplyCallback,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
-        self._operation = operation
+        self._action = action
         self._columns = list(columns)
         self._apply_callback = apply_callback
         self._editors: dict[str, ParameterEditor] = {}
 
-        self.setWindowTitle(operation.label)
+        self.setWindowTitle(action.label)
         self.setMinimumWidth(420)
 
         layout = QVBoxLayout(self)
-        description = QLabel(operation.description)
+        description = QLabel(action.description)
         description.setWordWrap(True)
         layout.addWidget(description)
 
         form = QFormLayout()
-        for param in operation.parameters:
+        for param in action.parameters:
             editor = create_editor(param, self._columns, self)
             editor.value_changed.connect(self._update_preview)
             marker = _REQUIRED_MARKER if param.required else ""
@@ -107,6 +107,15 @@ class OperationDialog(QDialog):
         """Return the current value of every editor."""
         return {name: ed.value() for name, ed in self._editors.items()}
 
+    def set_values(self, values: Mapping[str, Any]) -> None:
+        """Fill in editors from ``values`` (e.g. to repeat an action)."""
+        for name, value in values.items():
+            self._editors[name].set_value(value)
+
+    def confirm(self) -> None:
+        """Behave as if the user pressed *OK*."""
+        self._on_accepted()
+
     def preview_text(self) -> str:
         """Return the code preview currently displayed."""
         return self._preview.text()
@@ -118,18 +127,18 @@ class OperationDialog(QDialog):
     def _update_preview(self) -> None:
         """Show the code that would run, or why it cannot run yet."""
         try:
-            resolved = self._operation.resolve_params(
+            resolved = self._action.resolve_params(
                 self.values(), self._columns
             )
-        except OperationError as exc:
+        except ActionError as exc:
             self._preview.setText(str(exc))
             return
-        self._preview.setText(self._operation.to_code(resolved))
+        self._preview.setText(self._action.to_code(resolved))
 
     def _on_accepted(self) -> None:
         try:
             self._apply_callback(self.values())
-        except OperationError as exc:
+        except ActionError as exc:
             self._error.setText(str(exc))
             self._error.show()
             return

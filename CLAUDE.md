@@ -1,9 +1,14 @@
 # CLAUDE.md — rules for working on amazeplot
 
 amazeplot is a PySide6 desktop GUI that exposes pandas DataFrame methods
-as forms and exports every session as a runnable pandas script. Read
-`docs/PLAN.md` (roadmap) and `docs/architecture.md` (design) before
-making structural changes.
+and matplotlib plotting functions as forms, and exports every session as
+a runnable pandas/matplotlib script. Read `docs/PLAN.md` (roadmap) and
+`docs/architecture.md` (design) before making structural changes.
+
+Vocabulary: an **action** is anything in the toolbox. A **data
+operation** (`Operation`) turns the DataFrame into a new one; a **plot
+call** (`PlotCall`, usually an `AxesCall`) draws a **layer** on the
+figure.
 
 ## Commands
 
@@ -22,34 +27,44 @@ and `python -m pytest` must pass.
 
 1. **Layering is strict:** `gui → operations → core`.
    - `amazeplot.core` must never import Qt/PySide6 or `amazeplot.gui`.
-   - `amazeplot.operations` contains declarations only, with no widgets.
-   - `amazeplot.gui` contains no pandas logic beyond displaying data. It
-     calls the session and operations.
-2. **The `DataSession` is the single source of truth.** Views never keep
-   their own copy of the state. They subscribe and redraw in `refresh()`.
-3. **Operations are declarative.** Each one is described by `Parameter`
+   - `amazeplot.operations` is the catalogue of actions. It contains
+     declarations only, with no widgets.
+   - `amazeplot.gui` contains no pandas or plotting logic beyond
+     displaying results. It calls the session and the actions.
+   - Never import `matplotlib.pyplot` in the package: it holds global
+     state. Use `matplotlib.figure.Figure`/`Axes` in the core and
+     `backend_qtagg` in the GUI. Only *generated scripts* use pyplot.
+2. **The `DataSession` is the single source of truth.** That includes
+   the plot layers. Views never keep their own copy of the state. They
+   subscribe and redraw in `refresh()`. Every change pushes an immutable
+   snapshot, so undo/redo must keep working for any new kind of state.
+3. **Actions are declarative.** Each one is described by `Parameter`
    metadata, and the GUI builds its forms from that metadata. Never
-   write a dialog by hand for a single operation.
+   write a dialog by hand for a single action.
 4. **Execution and code generation share one source.** For
-   `MethodOperation`, both come from `build_kwargs`. Custom `Operation`
-   subclasses must keep `_execute` and `to_code` exactly equivalent.
+   `MethodOperation` both come from `build_kwargs`, and for `AxesCall`
+   both come from `build_arguments` (with `ColumnRef` placeholders).
+   Custom subclasses must keep `_execute`/`_draw` and `to_code` exactly
+   equivalent.
 5. **Never mutate the input DataFrame.** Operations return a new frame,
-   and `inplace=True` is forbidden.
+   plot calls only read it, and `inplace=True` is forbidden.
 6. **No global mutable state.** Pass `OperationRegistry` and
    `DataSession` in explicitly (dependency injection). There are no
    module-level singletons.
 7. **Never load pickles** or other formats that execute code when read.
 
-## Adding operations
+## Adding operations and plots
 
 Follow `docs/adding_operations.md`. In short:
 
-- `Parameter.name` is the pandas keyword name, and `Parameter.default`
-  equals the pandas default. Values equal to the default are omitted
-  from calls and generated code.
-- Register the operation in its module's `OPERATIONS` tuple.
+- `Parameter.name` is the pandas/matplotlib keyword name, and
+  `Parameter.default` equals the library default (`None` means "let the
+  library decide"). Values equal to the default are omitted from calls
+  and generated code.
+- Register the action in its module's `ACTIONS` tuple.
 - Add an example to `EXAMPLES` in `tests/core/test_builtin_operations.py`
-  (the contract test fails without one).
+  (data operations) or `tests/core/test_builtin_plots.py` (plot calls).
+  The contract tests fail without one.
 
 ## Coding style
 
@@ -78,13 +93,14 @@ Follow `docs/adding_operations.md`. In short:
 
 ## Error handling
 
-- User-caused failures raise subclasses of `AmazeplotError`
-  (`OperationError`, `ParameterError`, `DataIOError`, `SessionError`),
-  with messages written for end users.
+- User-caused failures raise subclasses of `AmazeplotError`, with
+  messages written for end users. Action failures are `ActionError`s:
+  `ParameterError`, `OperationError` (pandas) or `PlotError`
+  (matplotlib). The others are `DataIOError` and `SessionError`.
 - Use `raise ... from exc` when wrapping, to keep the cause.
 - Broad `except Exception` is allowed **only** at a documented boundary
-  (currently `Operation.execute`). Anywhere else, catch specific
-  exceptions.
+  (currently `Operation.execute` and `PlotCall.draw`). Anywhere else,
+  catch specific exceptions.
 - The GUI catches `AmazeplotError` and shows it. Anything else is a bug
   and reaches the global exception hook in `gui/app.py`.
 
@@ -96,8 +112,13 @@ Follow `docs/adding_operations.md`. In short:
   fixture). Keep logic out of widgets so that most behaviour can be
   tested in the core.
 - Give widgets small public accessors for tests (`values()`,
-  `preview_text()`, `status_text()`) rather than poking at private Qt
-  children. Never open modal dialogs (`exec()`, `QMessageBox`) in tests.
+  `set_values()`, `confirm()`, `preview_text()`, `status_text()`) rather
+  than poking at private Qt children. Every `ParameterEditor` implements
+  `value()` and `set_value()`. Never open modal dialogs (`exec()`,
+  `QMessageBox`) in tests.
+- Tests run with `QT_QPA_PLATFORM=offscreen` and `MPLBACKEND=Agg` (set
+  in `tests/conftest.py`). Inspect figures through `Axes` objects, not
+  rendered images.
 - Use the shared `people` fixture from `tests/conftest.py` for sample
   data.
 

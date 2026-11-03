@@ -48,7 +48,7 @@ def test_apply_does_not_mutate_input(people):
 
 
 def test_unknown_parameter_is_rejected(people):
-    with pytest.raises(OperationError, match="unknown parameter"):
+    with pytest.raises(ParameterError, match="unknown parameter"):
         DROPNA.apply(people, {"nope": 1})
 
 

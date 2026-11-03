@@ -30,6 +30,13 @@ def test_every_kind_has_an_editor():
         (Parameter("x", "X", ParameterKind.FLOAT, default=0.5), 0.5),
         (Parameter("b", "B", ParameterKind.BOOLEAN, default=True), True),
         (Parameter("t", "T", ParameterKind.TEXT), ""),
+        (Parameter("n", "N", ParameterKind.INTEGER), None),
+        (Parameter("x", "X", ParameterKind.FLOAT, minimum=0.0), None),
+        (Parameter("n", "N", ParameterKind.INTEGER, required=True), 0),
+        (
+            Parameter("m", "M", ParameterKind.CHOICE, choices=(None, "o")),
+            None,
+        ),
     ],
     ids=lambda value: getattr(value, "kind", value),
 )
@@ -43,5 +50,19 @@ def test_columns_editor_keeps_non_string_labels(qtbot):
     editor = create_editor(Parameter("c", "C", ParameterKind.COLUMNS), COLUMNS)
     qtbot.addWidget(editor)
     with qtbot.waitSignal(editor.value_changed):
-        editor.set_checked([3, "a"])
+        editor.set_value([3, "a"])
     assert editor.value() == ["a", 3]
+
+
+def test_optional_number_can_be_set_and_reset(qtbot):
+    editor = create_editor(
+        Parameter("alpha", "A", ParameterKind.FLOAT, minimum=0.0, step=0.1),
+        COLUMNS,
+    )
+    qtbot.addWidget(editor)
+    editor.set_value(0.5)
+    assert editor.value() == 0.5
+    editor.set_value(0.0)
+    assert editor.value() == 0.0
+    editor.set_value(None)
+    assert editor.value() is None

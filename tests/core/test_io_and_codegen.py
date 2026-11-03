@@ -1,3 +1,6 @@
+import warnings
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 
@@ -6,6 +9,8 @@ from amazeplot.core.errors import DataIOError
 from amazeplot.core.io import load_dataframe, save_dataframe
 from amazeplot.core.session import DataSession
 from amazeplot.operations.clean import DROPNA
+from amazeplot.operations.decorate import TITLE
+from amazeplot.operations.plot import SCATTER
 from amazeplot.operations.transform import SORT_VALUES
 
 
@@ -54,3 +59,33 @@ def test_script_without_source_has_placeholder():
 def test_script_rejects_invalid_variable():
     with pytest.raises(ValueError):
         generate_script(DataSession(), variable="not valid")
+
+
+def test_script_without_plot_does_not_import_pyplot(people):
+    session = DataSession()
+    session.load(people)
+    assert "matplotlib" not in generate_script(session)
+
+
+def test_generated_script_draws_the_figure(people, tmp_path):
+    path = tmp_path / "people.csv"
+    save_dataframe(people, path)
+    session = DataSession()
+    session.load(*load_dataframe(path))
+    session.apply(DROPNA, {})
+    session.add_layer(SCATTER, {"x": "age", "y": "score"})
+    session.add_layer(TITLE, {"label": "People"})
+
+    script = generate_script(session)
+    assert script.index("import matplotlib") < script.index("import pandas")
+
+    namespace = {}
+    plt.close("all")
+    with warnings.catch_warnings():
+        # plt.show() warns that the Agg test backend is non-interactive.
+        warnings.simplefilter("ignore", UserWarning)
+        exec(script, namespace)
+    axes = namespace["ax"]
+    assert axes.get_title() == "People"
+    assert len(axes.collections[0].get_offsets()) == len(session.frame)
+    plt.close("all")

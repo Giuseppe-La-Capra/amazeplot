@@ -5,8 +5,10 @@ import os
 import pandas as pd
 import pytest
 
-# Run Qt without a display (CI, containers). Must be set before Qt loads.
+# Run Qt and matplotlib without a display (CI, containers). These must
+# be set before Qt or matplotlib load.
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 
 @pytest.fixture

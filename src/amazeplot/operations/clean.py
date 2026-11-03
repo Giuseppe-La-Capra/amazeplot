@@ -2,7 +2,8 @@
 
 from typing import Any
 
-from amazeplot.core.operation import MethodOperation, Params
+from amazeplot.core.action import Params
+from amazeplot.core.operation import MethodOperation
 from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
 from amazeplot.operations._common import SUBSET
 
@@ -172,7 +173,7 @@ REPLACE = MethodOperation(
     method="replace",
 )
 
-OPERATIONS = (
+ACTIONS = (
     DROPNA,
     FILLNA,
     DROP_DUPLICATES,

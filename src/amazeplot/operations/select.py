@@ -113,7 +113,7 @@ NSMALLEST = MethodOperation(
     method="nsmallest",
 )
 
-OPERATIONS = (
+ACTIONS = (
     HEAD,
     TAIL,
     QUERY,

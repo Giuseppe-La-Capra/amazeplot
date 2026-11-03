@@ -1,13 +1,18 @@
-# Adding a new operation
+# Adding a new operation or plot
 
-Most pandas methods can be exposed in three steps without touching the
-GUI.
+Most pandas methods and matplotlib `Axes` methods can be exposed in
+three steps without touching the GUI. Both are *actions*: they are
+declared in a module of `src/amazeplot/operations/` and listed in that
+module's `ACTIONS` tuple.
+
+# Data operations (pandas)
 
 ## 1. Declare the operation
 
 Pick the module that matches the GUI category (`select.py`, `clean.py`,
 `transform.py`, `aggregate.py`), or create a new module for a new
-category and add it to `_MODULES` in `operations/__init__.py`.
+category (with its own `ACTIONS` tuple) and add it to `_MODULES` in
+`operations/__init__.py`.
 
 ```python
 # src/amazeplot/operations/transform.py
@@ -28,7 +33,7 @@ ROUND = MethodOperation(
     method="round",                   # DataFrame method to call
 )
 
-OPERATIONS = (..., ROUND)            # register it in the module tuple
+ACTIONS = (..., ROUND)               # register it in the module tuple
 ```
 
 Rules:
@@ -66,6 +71,73 @@ ruff format .
 ruff check .
 python -m pytest
 ```
+
+# Plot calls (matplotlib)
+
+## 1. Declare the plot call
+
+Plot calls live in `plot.py` (they draw data) and `decorate.py` (they
+change the axes: titles, scales, guides). Most are an `AxesCall`, which
+calls one `matplotlib.axes.Axes` method:
+
+```python
+# src/amazeplot/operations/plot.py
+VIOLIN = AxesCall(
+    key="plot_violin",                # unique, snake_case
+    label="Violin plot",
+    category=CATEGORY,
+    description="Distribution shape of one or more numeric columns.",
+    parameters=(
+        _columns("dataset", "Columns"),   # COLUMNS -> [df['a'], ...]
+        Parameter(
+            "showmeans", "Show means", ParameterKind.BOOLEAN,
+            default=False,            # == the matplotlib default
+        ),
+        ORIENTATION,                  # shared styling parameter
+    ),
+    method="violinplot",              # Axes method to call
+    positional=("dataset",),          # passed positionally, in order
+    dropna=True,                      # violinplot fails on NaN
+)
+
+ACTIONS = (..., VIOLIN)
+```
+
+Rules, in addition to those for data operations:
+
+- `COLUMN` parameters are passed as `df['column']` and `COLUMNS`
+  parameters as a list of them. Other kinds are passed as plain values.
+- List the parameters that matplotlib takes positionally (usually the
+  data, such as `x` and `y`) in `positional`. Empty positional values
+  are skipped, which is how `ax.plot(y)` works without `x`.
+- Optional styling parameters use `default=None` ("let matplotlib
+  decide"). The editors show "(default)" and the value is omitted. Reuse
+  the shared ones in `_common.py` (`COLOR`, `ALPHA`, `LINESTYLE`,
+  `MARKER`, `COLORMAP`, ...).
+- Use `extra_kwargs` for arguments computed from other parameters (for
+  example, legend labels from column names), `numeric_frame=True` to
+  pass all numeric columns (`imshow`), and `dropna=True` when matplotlib
+  rejects missing values.
+- If the drawing needs several calls, subclass `PlotCall` and implement
+  `_draw` and `to_code`, keeping them exactly equivalent.
+- Never use `matplotlib.pyplot` outside generated code.
+
+## 2. Add a contract-test example
+
+Add an entry to `EXAMPLES` in `tests/core/test_builtin_plots.py`, using
+columns of the shared `people` fixture:
+
+```python
+"plot_violin": {"dataset": ["age", "score"]},
+```
+
+The suite now checks three things: the example changes the axes, the
+generated code draws the same artists as the GUI, and the DataFrame is
+not mutated.
+
+## 3. Check
+
+Run the same three commands as above.
 
 ## Adding a new parameter kind
 

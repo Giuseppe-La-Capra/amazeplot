@@ -1,69 +1,69 @@
-"""A catalogue of the operations available in the application."""
+"""A catalogue of the actions available in the application."""
 
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 
-from amazeplot.core.operation import Operation
+from amazeplot.core.action import Action
 
 
-class OperationRegistry:
-    """Ordered collection of operations, indexed by :attr:`Operation.key`.
+class ActionRegistry:
+    """Ordered collection of actions, indexed by :attr:`Action.key`.
 
     The registry is a plain object passed to whoever needs it (no global
     state), which keeps tests isolated and makes plugins easy to add.
 
     Parameters
     ----------
-    operations : iterable of Operation, optional
-        Operations to register immediately.
+    actions : iterable of Action, optional
+        Actions to register immediately.
     """
 
-    def __init__(self, operations: Iterable[Operation] = ()) -> None:
-        self._operations: dict[str, Operation] = {}
-        for operation in operations:
-            self.register(operation)
+    def __init__(self, actions: Iterable[Action] = ()) -> None:
+        self._actions: dict[str, Action] = {}
+        for action in actions:
+            self.register(action)
 
-    def register(self, operation: Operation) -> None:
-        """Add ``operation`` to the registry.
+    def register(self, action: Action) -> None:
+        """Add ``action`` to the registry.
 
         Raises
         ------
         ValueError
-            If an operation with the same key is already registered.
+            If an action with the same key is already registered.
         """
-        if operation.key in self._operations:
-            raise ValueError(f"Duplicate operation key {operation.key!r}")
-        self._operations[operation.key] = operation
+        if action.key in self._actions:
+            raise ValueError(f"Duplicate action key {action.key!r}")
+        self._actions[action.key] = action
 
-    def get(self, key: str) -> Operation:
-        """Return the operation registered under ``key``.
+    def get(self, key: str) -> Action:
+        """Return the action registered under ``key``.
 
         Raises
         ------
         KeyError
-            If no operation has that key.
+            If no action has that key.
         """
         try:
-            return self._operations[key]
+            return self._actions[key]
         except KeyError:
-            raise KeyError(f"Unknown operation {key!r}") from None
+            raise KeyError(f"Unknown action {key!r}") from None
 
-    def by_category(self) -> dict[str, list[Operation]]:
-        """Group operations by category, preserving registration order."""
-        groups: dict[str, list[Operation]] = {}
-        for operation in self:
-            groups.setdefault(operation.category, []).append(operation)
+    def by_category(self) -> dict[str, list[Action]]:
+        """Group actions by category, preserving registration order."""
+        groups: dict[str, list[Action]] = {}
+        for action in self:
+            groups.setdefault(action.category, []).append(action)
         return groups
 
     def __contains__(self, key: object) -> bool:
-        """Return whether an operation is registered under ``key``."""
-        return key in self._operations
+        """Return whether an action is registered under ``key``."""
+        return key in self._actions
 
-    def __iter__(self) -> Iterator[Operation]:
-        """Iterate over operations in registration order."""
-        return iter(self._operations.values())
+    def __iter__(self) -> Iterator[Action]:
+        """Iterate over actions in registration order."""
+        return iter(self._actions.values())
 
     def __len__(self) -> int:
-        """Return the number of registered operations."""
-        return len(self._operations)
+        """Return the number of registered actions."""
+        return len(self._actions)

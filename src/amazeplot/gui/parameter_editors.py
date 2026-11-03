@@ -28,7 +28,9 @@ from PySide6.QtWidgets import (
 from amazeplot.core.parameters import Parameter, ParameterKind
 
 _INT_LIMIT = 2**31 - 1
+_FLOAT_LIMIT = 1e12
 _NO_SELECTION_TEXT = "(none)"
+_LIBRARY_DEFAULT_TEXT = "(default)"
 _COLUMNS_LIST_HEIGHT = 140
 
 
@@ -36,8 +38,9 @@ class ParameterEditor(QWidget):
     """Base class of the widgets that edit one parameter.
 
     Subclasses build their inner widget in :meth:`_build`, return the
-    current value from :meth:`value` and emit :attr:`value_changed`
-    whenever the user edits it.
+    current value from :meth:`value`, accept a new one in
+    :meth:`set_value`, and emit :attr:`value_changed` whenever the value
+    changes.
 
     Parameters
     ----------
@@ -72,6 +75,10 @@ class ParameterEditor(QWidget):
         """Return the value currently entered by the user."""
         raise NotImplementedError
 
+    def set_value(self, value: Any) -> None:
+        """Show ``value`` in the editor, as if the user entered it."""
+        raise NotImplementedError
+
 
 class ColumnEditor(ParameterEditor):
     """Drop-down list with one column label."""
@@ -90,6 +97,10 @@ class ColumnEditor(ParameterEditor):
     def value(self) -> Hashable | None:
         """Return the selected column label, or ``None``."""
         return self._combo.currentData()
+
+    def set_value(self, value: Hashable | None) -> None:
+        """Select the column ``value`` (``None`` for no column)."""
+        self._combo.setCurrentIndex(self._combo.findData(value))
 
 
 class ColumnsEditor(ParameterEditor):
@@ -122,8 +133,9 @@ class ColumnsEditor(ParameterEditor):
             if item.checkState() == Qt.CheckState.Checked
         ]
 
-    def set_checked(self, columns: Sequence[Hashable]) -> None:
-        """Check exactly the given columns (useful for tests)."""
+    def set_value(self, value: Sequence[Hashable] | None) -> None:
+        """Check exactly the columns in ``value``."""
+        columns = value or []
         for row in range(self._list.count()):
             item = self._list.item(row)
             checked = item.data(Qt.ItemDataRole.UserRole) in columns
@@ -138,7 +150,7 @@ class ChoiceEditor(ParameterEditor):
     def _build(self, columns: Sequence[Hashable]) -> QWidget:
         self._combo = QComboBox()
         for choice in self.parameter.choices:
-            text = _NO_SELECTION_TEXT if choice is None else str(choice)
+            text = _LIBRARY_DEFAULT_TEXT if choice is None else str(choice)
             self._combo.addItem(text, choice)
         index = self._combo.findData(self.parameter.default)
         self._combo.setCurrentIndex(max(index, 0))
@@ -149,39 +161,78 @@ class ChoiceEditor(ParameterEditor):
         """Return the selected choice."""
         return self.parameter.choices[self._combo.currentIndex()]
 
+    def set_value(self, value: Any) -> None:
+        """Select the choice equal to ``value``."""
+        self._combo.setCurrentIndex(self.parameter.choices.index(value))
 
-class IntegerEditor(ParameterEditor):
+
+class _NumberEditor(ParameterEditor):
+    """Shared logic of the integer and float spin boxes.
+
+    An optional parameter whose default is ``None`` gets one extra step
+    below its minimum, displayed as "(default)", which maps back to
+    ``None`` so matplotlib or pandas choose the value.
+    """
+
+    _number_type: type[int] | type[float] = float
+
+    def _configure(
+        self, spin: QSpinBox | QDoubleSpinBox, limit: float
+    ) -> None:
+        """Set range, step and initial value of ``spin``."""
+        self._spin = spin
+        param = self.parameter
+        cast = self._number_type
+        low, high = (cast(bound) for bound in _bounds(param, -limit, limit))
+        step = cast(param.step if param.step is not None else 1)
+        self._optional = param.default is None and not param.required
+        if self._optional:
+            low -= step
+            spin.setSpecialValueText(_LIBRARY_DEFAULT_TEXT)
+        spin.setRange(low, high)
+        spin.setSingleStep(step)
+        if self._optional:
+            spin.setValue(low)
+        elif param.default is not None:
+            spin.setValue(cast(param.default))
+        spin.valueChanged.connect(self.value_changed)
+
+    def value(self) -> int | float | None:
+        """Return the entered number, or ``None`` for "(default)"."""
+        current = self._spin.value()
+        if self._optional and current == self._spin.minimum():
+            return None
+        return current
+
+    def set_value(self, value: float | None) -> None:
+        """Enter ``value``; ``None`` selects "(default)"."""
+        if value is None:
+            self._spin.setValue(self._spin.minimum())
+        else:
+            self._spin.setValue(value)
+
+
+class IntegerEditor(_NumberEditor):
     """Spin box for whole numbers."""
 
+    _number_type = int
+
     def _build(self, columns: Sequence[Hashable]) -> QWidget:
-        self._spin = QSpinBox()
-        low, high = _bounds(self.parameter, -_INT_LIMIT, _INT_LIMIT)
-        self._spin.setRange(int(low), int(high))
-        self._spin.setValue(int(self.parameter.default or 0))
-        self._spin.valueChanged.connect(self.value_changed)
-        return self._spin
-
-    def value(self) -> int:
-        """Return the entered integer."""
-        return self._spin.value()
+        spin = QSpinBox()
+        self._configure(spin, _INT_LIMIT)
+        return spin
 
 
-class FloatEditor(ParameterEditor):
+class FloatEditor(_NumberEditor):
     """Spin box for decimal numbers."""
 
-    _DECIMALS = 6
+    _DECIMALS = 3
 
     def _build(self, columns: Sequence[Hashable]) -> QWidget:
-        self._spin = QDoubleSpinBox()
-        self._spin.setDecimals(self._DECIMALS)
-        self._spin.setRange(*_bounds(self.parameter, -1e12, 1e12))
-        self._spin.setValue(float(self.parameter.default or 0.0))
-        self._spin.valueChanged.connect(self.value_changed)
-        return self._spin
-
-    def value(self) -> float:
-        """Return the entered number."""
-        return self._spin.value()
+        spin = QDoubleSpinBox()
+        spin.setDecimals(self._DECIMALS)
+        self._configure(spin, _FLOAT_LIMIT)
+        return spin
 
 
 class BooleanEditor(ParameterEditor):
@@ -196,6 +247,10 @@ class BooleanEditor(ParameterEditor):
     def value(self) -> bool:
         """Return whether the box is ticked."""
         return self._check.isChecked()
+
+    def set_value(self, value: bool) -> None:
+        """Tick the box when ``value`` is true."""
+        self._check.setChecked(bool(value))
 
 
 class TextEditor(ParameterEditor):
@@ -213,9 +268,9 @@ class TextEditor(ParameterEditor):
         """Return the entered text; parsing happens in the core."""
         return self._line.text()
 
-    def set_text(self, text: str) -> None:
-        """Replace the entered text (useful for tests)."""
-        self._line.setText(text)
+    def set_value(self, value: Any) -> None:
+        """Replace the entered text with ``value`` (``None`` clears)."""
+        self._line.setText("" if value is None else str(value))
 
 
 EDITOR_CLASSES: dict[ParameterKind, type[ParameterEditor]] = {

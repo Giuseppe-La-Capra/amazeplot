@@ -18,8 +18,8 @@ from typing import Any
 
 import pandas as pd
 
+from amazeplot.core.action import format_call_arguments
 from amazeplot.core.errors import DataIOError
-from amazeplot.core.operation import format_call_arguments
 
 _READERS: Mapping[str, tuple[str, Mapping[str, Any]]] = MappingProxyType(
     {

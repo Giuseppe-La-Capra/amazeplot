@@ -1,4 +1,4 @@
-"""Contract tests run against every built-in operation.
+"""Contract tests run against every built-in data operation.
 
 When you add an operation, add an entry to ``EXAMPLES``: the tests then
 check that it applies cleanly and that its generated code reproduces
@@ -11,7 +11,11 @@ import pytest
 from amazeplot.core.operation import Operation
 from amazeplot.operations import build_default_registry
 
-REGISTRY = build_default_registry()
+OPERATIONS = [
+    action
+    for action in build_default_registry()
+    if isinstance(action, Operation)
+]
 
 EXAMPLES = {
     "head": {"n": 2},
@@ -40,17 +44,17 @@ EXAMPLES = {
 
 
 def test_every_operation_has_an_example():
-    assert {op.key for op in REGISTRY} == set(EXAMPLES)
+    assert {op.key for op in OPERATIONS} == set(EXAMPLES)
 
 
 def test_operation_metadata_is_complete():
-    for operation in REGISTRY:
+    for operation in OPERATIONS:
         assert operation.label, operation.key
         assert operation.category, operation.key
         assert operation.description, operation.key
 
 
-@pytest.mark.parametrize("operation", list(REGISTRY), ids=lambda op: op.key)
+@pytest.mark.parametrize("operation", OPERATIONS, ids=lambda op: op.key)
 def test_generated_code_reproduces_result(operation: Operation, people):
     params = EXAMPLES[operation.key]
     result = operation.apply(people, params)
@@ -62,7 +66,7 @@ def test_generated_code_reproduces_result(operation: Operation, people):
     pd.testing.assert_frame_equal(namespace["df"], result)
 
 
-@pytest.mark.parametrize("operation", list(REGISTRY), ids=lambda op: op.key)
+@pytest.mark.parametrize("operation", OPERATIONS, ids=lambda op: op.key)
 def test_operation_does_not_mutate_input(operation: Operation, people):
     before = people.copy()
     operation.apply(people, EXAMPLES[operation.key])

@@ -1,9 +1,11 @@
 import pytest
 
-from amazeplot.core.errors import OperationError, SessionError
+from amazeplot.core.errors import ParameterError, PlotError, SessionError
 from amazeplot.core.session import DataSession
 from amazeplot.operations.clean import DROPNA, FILLNA
-from amazeplot.operations.select import HEAD
+from amazeplot.operations.decorate import TITLE
+from amazeplot.operations.plot import LINE, SCATTER
+from amazeplot.operations.select import HEAD, SELECT_COLUMNS
 
 
 @pytest.fixture
@@ -31,7 +33,7 @@ def test_apply_records_step(session):
 
 def test_failed_apply_leaves_session_unchanged(session):
     frame = session.frame
-    with pytest.raises(OperationError):
+    with pytest.raises(ParameterError):
         session.apply(HEAD, {"n": -5})
     assert session.frame is frame
     assert session.steps == ()
@@ -77,3 +79,66 @@ def test_listeners_are_notified(session):
     unsubscribe()
     session.redo()
     assert len(calls) == 2
+
+
+# -- Plot layers ---------------------------------------------------------
+
+
+def test_add_layer(session):
+    layer = session.add_layer(SCATTER, {"x": "age", "y": "score"})
+    assert session.layers == (layer,)
+    assert layer.params["x"] == "age"
+
+
+def test_add_layer_requires_data():
+    with pytest.raises(SessionError):
+        DataSession().add_layer(TITLE, {"label": "t"})
+
+
+def test_invalid_layer_is_not_added(session):
+    with pytest.raises(ParameterError):
+        session.add_layer(SCATTER, {"x": "nope", "y": "score"})
+    with pytest.raises(PlotError):
+        session.add_layer(
+            SCATTER, {"x": "age", "y": "score", "color": "not-a-colour"}
+        )
+    assert session.layers == ()
+    assert not session.can_undo
+
+
+def test_undo_covers_steps_and_layers(session):
+    session.apply(DROPNA, {})
+    session.add_layer(LINE, {"y": "score"})
+    session.undo()
+    assert session.layers == ()
+    assert len(session.steps) == 1
+    session.undo()
+    assert session.steps == ()
+    session.redo()
+    session.redo()
+    assert len(session.layers) == 1
+
+
+def test_layers_survive_data_steps(session):
+    session.add_layer(LINE, {"y": "score"})
+    session.apply(SELECT_COLUMNS, {"items": ["name"]})
+    assert len(session.layers) == 1
+
+
+def test_remove_and_clear_layers(session):
+    session.add_layer(TITLE, {"label": "first"})
+    session.add_layer(TITLE, {"label": "second"})
+    session.remove_layer(0)
+    assert [layer.params["label"] for layer in session.layers] == ["second"]
+    session.clear_layers()
+    assert session.layers == ()
+    with pytest.raises(SessionError):
+        session.clear_layers()
+    with pytest.raises(SessionError):
+        session.remove_layer(0)
+
+
+def test_load_resets_layers(session, people):
+    session.add_layer(TITLE, {"label": "t"})
+    session.load(people)
+    assert session.layers == ()

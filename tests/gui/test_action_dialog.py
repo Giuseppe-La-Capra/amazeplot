@@ -1,13 +1,13 @@
 from amazeplot.core.errors import OperationError
-from amazeplot.gui.operation_dialog import OperationDialog
+from amazeplot.gui.action_dialog import ActionDialog
 from amazeplot.operations.select import QUERY
 from amazeplot.operations.transform import SORT_VALUES
 
 COLUMNS = ["name", "age"]
 
 
-def _dialog(qtbot, operation, callback=lambda params: None):
-    dialog = OperationDialog(operation, COLUMNS, callback)
+def _dialog(qtbot, action, callback=lambda params: None):
+    dialog = ActionDialog(action, COLUMNS, callback)
     qtbot.addWidget(dialog)
     return dialog
 
@@ -19,17 +19,17 @@ def test_preview_shows_validation_message(qtbot):
 
 def test_preview_updates_with_input(qtbot):
     dialog = _dialog(qtbot, SORT_VALUES)
-    dialog.editor("by").set_checked(["age"])
+    dialog.set_values({"by": ["age"]})
     assert dialog.preview_text() == "df = df.sort_values(by=['age'])"
 
 
 def test_accept_calls_callback(qtbot):
     received = []
     dialog = _dialog(qtbot, QUERY, received.append)
-    dialog.editor("expr").set_text("age > 3")
-    dialog._on_accepted()
+    dialog.set_values({"expr": "age > 3"})
+    dialog.confirm()
     assert received == [{"expr": "age > 3"}]
-    assert dialog.result() == OperationDialog.DialogCode.Accepted
+    assert dialog.result() == ActionDialog.DialogCode.Accepted
 
 
 def test_error_keeps_dialog_open(qtbot):
@@ -37,6 +37,6 @@ def test_error_keeps_dialog_open(qtbot):
         raise OperationError("boom")
 
     dialog = _dialog(qtbot, QUERY, fail)
-    dialog._on_accepted()
+    dialog.confirm()
     assert dialog.error_text() == "boom"
-    assert dialog.result() != OperationDialog.DialogCode.Accepted
+    assert dialog.result() != ActionDialog.DialogCode.Accepted

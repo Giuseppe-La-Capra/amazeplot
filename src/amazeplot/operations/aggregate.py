@@ -7,12 +7,8 @@ from typing import Any
 
 import pandas as pd
 
-from amazeplot.core.operation import (
-    MethodOperation,
-    Operation,
-    Params,
-    format_call_arguments,
-)
+from amazeplot.core.action import Params, format_call_arguments
+from amazeplot.core.operation import MethodOperation, Operation
 from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
 from amazeplot.operations._common import AGGREGATIONS, SUBSET
 
@@ -166,4 +162,4 @@ CORR = MethodOperation(
     method="corr",
 )
 
-OPERATIONS = (GROUPBY, DESCRIBE, VALUE_COUNTS, PIVOT_TABLE, CORR)
+ACTIONS = (GROUPBY, DESCRIBE, VALUE_COUNTS, PIVOT_TABLE, CORR)

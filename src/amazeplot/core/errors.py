@@ -1,9 +1,10 @@
 """Exception hierarchy of the core layer.
 
-Every error that is caused by user input (bad parameters, a pandas call
-that fails on the current data, an unreadable file) derives from
-:class:`AmazeplotError`. The GUI catches this base class and shows the
-message to the user; any other exception is treated as a bug.
+Every error that is caused by user input (bad parameters, a pandas or
+matplotlib call that fails on the current data, an unreadable file)
+derives from :class:`AmazeplotError`. The GUI catches this base class
+and shows the message to the user; any other exception is treated as a
+bug.
 """
 
 
@@ -11,12 +12,20 @@ class AmazeplotError(Exception):
     """Base class for all expected, user-facing errors."""
 
 
-class OperationError(AmazeplotError):
-    """An operation could not be applied to the current data."""
+class ActionError(AmazeplotError):
+    """An action (data operation or plot call) could not be performed."""
 
 
-class ParameterError(OperationError):
-    """A parameter value is missing or invalid."""
+class ParameterError(ActionError):
+    """A parameter value is missing, unknown or invalid."""
+
+
+class OperationError(ActionError):
+    """A data operation could not be applied to the current data."""
+
+
+class PlotError(ActionError):
+    """A plot call could not be drawn with the current data."""
 
 
 class SessionError(AmazeplotError):

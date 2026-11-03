@@ -118,14 +118,17 @@ class Parameter:
     kind : ParameterKind
         Kind of value, which selects the validator and editor widget.
     default : Any
-        Default value. It must mirror the pandas default, because values
-        equal to the default are omitted from the call and generated code.
+        Default value. It must mirror the pandas/matplotlib default,
+        because values equal to the default are omitted from the call
+        and the generated code. ``None`` means "let the library decide".
     required : bool
         Whether the user must provide a non-empty value.
     choices : tuple
         Allowed values, only used when ``kind`` is ``CHOICE``.
     minimum, maximum : float or None
         Inclusive numeric bounds for ``INTEGER`` and ``FLOAT`` parameters.
+    step : float or None
+        Increment used by numeric editors (a GUI hint, not validated).
     help : str
         Short explanation shown as a tooltip.
     """
@@ -138,6 +141,7 @@ class Parameter:
     choices: tuple[Any, ...] = ()
     minimum: float | None = None
     maximum: float | None = None
+    step: float | None = None
     help: str = ""
 
     def __post_init__(self) -> None:

@@ -1,14 +1,18 @@
-"""The editing session: current data, applied steps and undo/redo.
+"""The editing session: data, applied steps, plot layers and history.
 
 :class:`DataSession` is the single source of truth for the GUI. It is
 free of any Qt dependency; views register a callback with
 :meth:`DataSession.subscribe` and redraw when it fires.
+
+The state is a sequence of immutable snapshots. Every change (a data
+step, adding or removing a plot layer) pushes a new snapshot, so one
+undo/redo history covers both data and plots.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import pandas as pd
@@ -16,6 +20,7 @@ import pandas as pd
 from amazeplot.core.errors import SessionError
 from amazeplot.core.io import DataSource
 from amazeplot.core.operation import Operation
+from amazeplot.core.plotting import Layer, PlotCall
 
 Listener = Callable[[], None]
 
@@ -37,19 +42,28 @@ class Step:
         return self.operation.to_code(self.params, variable)
 
 
-class DataSession:
-    """Hold the loaded data and the history of applied operations.
+@dataclass(frozen=True, eq=False)
+class _Snapshot:
+    """The complete, immutable state of a session at one point."""
 
-    Every step stores the DataFrame it produced, so undo and redo are
+    frame: pd.DataFrame
+    steps: tuple[Step, ...] = ()
+    layers: tuple[Layer, ...] = ()
+
+
+class DataSession:
+    """Hold the loaded data, the applied steps and the plot layers.
+
+    Every snapshot keeps the DataFrame it produced, so undo and redo are
     instantaneous and never re-run pandas code. Thanks to pandas
-    copy-on-write, unchanged columns are shared between snapshots.
+    copy-on-write, unchanged columns are shared between snapshots, and
+    plot-only changes share the same DataFrame object.
     """
 
     def __init__(self) -> None:
         self._source: DataSource | None = None
-        self._frames: list[pd.DataFrame] = []
-        self._steps: list[Step] = []
-        self._redo_stack: list[tuple[Step, pd.DataFrame]] = []
+        self._history: list[_Snapshot] = []
+        self._redo_stack: list[_Snapshot] = []
         self._listeners: list[Listener] = []
 
     # -- State -----------------------------------------------------------
@@ -57,12 +71,12 @@ class DataSession:
     @property
     def has_data(self) -> bool:
         """Return whether a DataFrame has been loaded."""
-        return bool(self._frames)
+        return bool(self._history)
 
     @property
     def frame(self) -> pd.DataFrame | None:
         """Return the current DataFrame, or ``None`` before loading."""
-        return self._frames[-1] if self._frames else None
+        return self._history[-1].frame if self._history else None
 
     @property
     def source(self) -> DataSource | None:
@@ -71,28 +85,32 @@ class DataSession:
 
     @property
     def steps(self) -> tuple[Step, ...]:
-        """Return the applied steps, oldest first."""
-        return tuple(self._steps)
+        """Return the applied data steps, oldest first."""
+        return self._history[-1].steps if self._history else ()
+
+    @property
+    def layers(self) -> tuple[Layer, ...]:
+        """Return the plot layers, in drawing order."""
+        return self._history[-1].layers if self._history else ()
 
     @property
     def can_undo(self) -> bool:
         """Return whether :meth:`undo` would do anything."""
-        return bool(self._steps)
+        return len(self._history) > 1
 
     @property
     def can_redo(self) -> bool:
         """Return whether :meth:`redo` would do anything."""
         return bool(self._redo_stack)
 
-    # -- Mutations -------------------------------------------------------
+    # -- Data ------------------------------------------------------------
 
     def load(
         self, frame: pd.DataFrame, source: DataSource | None = None
     ) -> None:
         """Start a new session from ``frame``, discarding all history."""
         self._source = source
-        self._frames = [frame]
-        self._steps = []
+        self._history = [_Snapshot(frame)]
         self._redo_stack = []
         self._notify()
 
@@ -101,7 +119,8 @@ class DataSession:
     ) -> pd.DataFrame:
         """Apply ``operation`` to the current data and record the step.
 
-        On failure the session is left unchanged.
+        On failure the session is left unchanged. Plot layers are kept;
+        if they no longer fit the new data, drawing them reports it.
 
         Returns
         -------
@@ -112,20 +131,77 @@ class DataSession:
         ------
         SessionError
             If no data has been loaded.
-        OperationError
+        ParameterError, OperationError
             If the operation fails.
         """
-        current = self._require_frame()
-        resolved = operation.resolve_params(params, current.columns.tolist())
-        result = operation.execute(current, resolved)
-        self._steps.append(Step(operation, resolved))
-        self._frames.append(result)
-        self._redo_stack.clear()
-        self._notify()
+        current = self._current()
+        resolved = operation.resolve_params(
+            params, current.frame.columns.tolist()
+        )
+        result = operation.execute(current.frame, resolved)
+        step = Step(operation, resolved)
+        self._push(
+            replace(current, frame=result, steps=(*current.steps, step))
+        )
         return result
 
+    # -- Plot layers -----------------------------------------------------
+
+    def add_layer(self, call: PlotCall, params: Mapping[str, Any]) -> Layer:
+        """Add a plot layer drawn by ``call`` on top of the others.
+
+        The call is first drawn on a scratch figure, so a failing layer
+        is never added.
+
+        Raises
+        ------
+        SessionError
+            If no data has been loaded.
+        ParameterError, PlotError
+            If the parameters are invalid or drawing fails.
+        """
+        current = self._current()
+        resolved = call.resolve_params(params, current.frame.columns.tolist())
+        call.check(current.frame, resolved)
+        layer = Layer(call, resolved)
+        self._push(replace(current, layers=(*current.layers, layer)))
+        return layer
+
+    def remove_layer(self, index: int) -> None:
+        """Remove the plot layer at position ``index``.
+
+        Raises
+        ------
+        SessionError
+            If there is no layer at ``index``.
+        """
+        current = self._current()
+        if not 0 <= index < len(current.layers):
+            raise SessionError(f"There is no plot layer {index + 1}.")
+        layers = tuple(
+            layer
+            for position, layer in enumerate(current.layers)
+            if position != index
+        )
+        self._push(replace(current, layers=layers))
+
+    def clear_layers(self) -> None:
+        """Remove every plot layer.
+
+        Raises
+        ------
+        SessionError
+            If there are no layers.
+        """
+        current = self._current()
+        if not current.layers:
+            raise SessionError("There are no plot layers.")
+        self._push(replace(current, layers=()))
+
+    # -- History ---------------------------------------------------------
+
     def undo(self) -> None:
-        """Revert the most recent step.
+        """Revert the most recent change (data step or plot layer).
 
         Raises
         ------
@@ -134,11 +210,11 @@ class DataSession:
         """
         if not self.can_undo:
             raise SessionError("Nothing to undo.")
-        self._redo_stack.append((self._steps.pop(), self._frames.pop()))
+        self._redo_stack.append(self._history.pop())
         self._notify()
 
     def redo(self) -> None:
-        """Re-apply the most recently undone step.
+        """Re-apply the most recently undone change.
 
         Raises
         ------
@@ -147,9 +223,7 @@ class DataSession:
         """
         if not self.can_redo:
             raise SessionError("Nothing to redo.")
-        step, frame = self._redo_stack.pop()
-        self._steps.append(step)
-        self._frames.append(frame)
+        self._history.append(self._redo_stack.pop())
         self._notify()
 
     # -- Observers -------------------------------------------------------
@@ -170,12 +244,18 @@ class DataSession:
 
         return unsubscribe
 
+    # -- Helpers ---------------------------------------------------------
+
+    def _push(self, snapshot: _Snapshot) -> None:
+        self._history.append(snapshot)
+        self._redo_stack.clear()
+        self._notify()
+
     def _notify(self) -> None:
         for listener in list(self._listeners):
             listener()
 
-    def _require_frame(self) -> pd.DataFrame:
-        frame = self.frame
-        if frame is None:
+    def _current(self) -> _Snapshot:
+        if not self._history:
             raise SessionError("Load a dataset first.")
-        return frame
+        return self._history[-1]
