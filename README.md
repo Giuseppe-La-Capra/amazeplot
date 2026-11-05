@@ -23,29 +23,98 @@ a graphical interface. It shows you the exact code behind every click.
 - Export the transformed data, or export the whole session (data steps
   and figure) as a **runnable Python script** that reproduces it.
 
-## Installation
+## Getting started
 
-Requires Python 3.10 or newer.
+### 1. Requirements
+
+- Python 3.10 or newer (`python --version`).
+- Windows, macOS or Linux with a desktop. amazeplot is a desktop
+  application, so it opens a window.
+
+### 2. Get the code
+
+```bash
+git clone https://github.com/Giuseppe-La-Capra/amazeplot.git
+```
+
+```bash
+cd amazeplot
+```
+
+### 3. Create a virtual environment (recommended)
+
+A virtual environment keeps amazeplot's dependencies (pandas,
+matplotlib, PySide6) separate from your other Python projects.
+
+```bash
+python -m venv .venv
+```
+
+Activate it on Linux or macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+Activate it on Windows (PowerShell):
+
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+Activate it again whenever you open a new terminal to use amazeplot.
+
+### 4. Install
 
 ```bash
 pip install -e .
 ```
 
-Optional file formats:
+To also read and write Excel (`.xlsx`) and Parquet files:
 
 ```bash
 pip install -e ".[excel,parquet]"
 ```
 
-On minimal Linux systems, Qt may also need system libraries such as
-`libegl1`, `libgl1` and `libxkbcommon0`.
-
-## Usage
+### 5. Run
 
 ```bash
-amazeplot                 # or: python -m amazeplot
-amazeplot data.csv        # open a file on start-up
+amazeplot
 ```
+
+`python -m amazeplot` does the same thing. To open a file on start-up,
+pass its path:
+
+```bash
+amazeplot path/to/data.csv
+```
+
+No data at hand? This command writes a small `demo.csv` to try:
+
+```bash
+python -c "import pandas as pd, numpy as np; rng = np.random.default_rng(0); pd.DataFrame({'city': rng.choice(['Rome', 'Oslo', 'Lima'], 200), 'age': rng.integers(18, 80, 200), 'score': rng.normal(7, 1.5, 200).round(1)}).to_csv('demo.csv', index=False)"
+```
+
+```bash
+amazeplot demo.csv
+```
+
+### Troubleshooting
+
+- **`amazeplot: command not found`**: the virtual environment isn't
+  active. Activate it (step 3), or run `python -m amazeplot`.
+- **Linux: "Could not load the Qt platform plugin"** or a missing
+  `libEGL.so.1`: install the system libraries Qt needs. On
+  Debian/Ubuntu:
+
+  ```bash
+  sudo apt-get install libegl1 libgl1 libxkbcommon0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+  ```
+
+- **Opening an `.xlsx` or `.parquet` file fails** with a message about a
+  missing module: install the optional extras (step 4).
+
+## Usage
 
 1. **File → Open** a data file.
 2. Double-click an action in the **Toolbox** on the left, fill in the
@@ -81,11 +150,17 @@ plt.show()
 
 ## Development
 
+Install the development tools into the activated virtual environment,
+then format, lint and test:
+
 ```bash
 pip install -e ".[dev]"
+```
+
+```bash
 ruff format .     # PEP 8 formatting, 79 columns
 ruff check .      # lint
-python -m pytest  # unit and GUI tests (headless)
+python -m pytest  # unit and GUI tests (headless, no window opens)
 ```
 
 The project conventions are in [`CLAUDE.md`](CLAUDE.md).
