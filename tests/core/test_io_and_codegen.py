@@ -18,13 +18,21 @@ from amazeplot.operations.plot import SCATTER
 from amazeplot.operations.transform import SORT_VALUES
 
 
+def _missing_as_nan(frame):
+    return frame.where(frame.notna(), float("nan"))
+
+
 @pytest.mark.parametrize("suffix", [".csv", ".tsv", ".json"])
 def test_round_trip(people, tmp_path, suffix):
     path = tmp_path / f"people{suffix}"
     save_dataframe(people, path)
     loaded, source = load_dataframe(path)
     assert source.path == path
-    pd.testing.assert_frame_equal(loaded, people, check_dtype=False)
+    # Formats differ in how a missing value reads back (NaN for CSV,
+    # None for JSON); compare with every missing value as NaN.
+    pd.testing.assert_frame_equal(
+        _missing_as_nan(loaded), _missing_as_nan(people), check_dtype=False
+    )
 
 
 def test_unsupported_extension(tmp_path):
