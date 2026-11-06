@@ -71,6 +71,7 @@ def test_pandas_failure_becomes_operation_error(people):
 
 
 def test_non_dataframe_result_is_a_programming_error(people):
-    broken = MethodOperation("sum", "Sum", "C", "", method="sum")
+    # count() returns a Series for any column types on every pandas.
+    broken = MethodOperation("count", "Count", "C", "", method="count")
     with pytest.raises(TypeError, match="expected DataFrame"):
         broken.apply(people, {})
