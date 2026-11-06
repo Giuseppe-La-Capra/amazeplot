@@ -107,6 +107,9 @@ Dependencies only point **downwards**: `gui → operations → core`. See
       names operation.
 - [x] Complex numbers: display, `complex128` column type, and automatic
       conversion of complex numbers stored as text in CSV files.
+- [x] Create columns: a numpy function of a column (magnitude, phase,
+      real/imaginary parts, logarithms...) or an expression combining
+      columns (`DataFrame.eval`).
 - [ ] "Recent files" menu and remembered window layout (`QSettings`).
 - [ ] Clicking a history step jumps to that point (truncating redo).
 - [ ] Options in the Open dialog for the reader (separator, encoding,

@@ -72,6 +72,10 @@ shared by every toolbox entry:
 - `resolve_params(params, columns)` fills in defaults, coerces and
   validates values. It raises `ParameterError`.
 - `to_code(params, variable)` returns a single Python statement.
+- `code_imports` lists any imports that statement needs besides pandas
+  (e.g. `import numpy as np` for the *Create → Apply a function* tool).
+  `generate_script` adds each one once, so the script only imports what
+  it uses.
 
 The dialog, the toolbox tree and the code preview only know about
 `Action`, so they work unchanged for data operations and plot calls.

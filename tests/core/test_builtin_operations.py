@@ -36,6 +36,7 @@ def test_generated_code_reproduces_result(operation: Operation, people):
 
     resolved = operation.resolve_params(params, people.columns.tolist())
     namespace = {"pd": pd, "df": people.copy()}
+    exec("\n".join(operation.code_imports), namespace)
     exec(operation.to_code(resolved), namespace)
 
     pd.testing.assert_frame_equal(namespace["df"], result)

@@ -34,7 +34,8 @@ def generate_script(session: DataSession, variable: str = "df") -> str:
     str
         PEP 8 formatted Python source ending with a newline. The
         matplotlib part is only included when the session has plot
-        layers.
+        layers, and other imports (such as numpy) only when a step
+        needs them.
     """
     if not variable.isidentifier():
         raise ValueError(f"Invalid variable name: {variable!r}")
@@ -46,10 +47,14 @@ def generate_script(session: DataSession, variable: str = "df") -> str:
         else _PLACEHOLDER_SOURCE.format(variable=variable)
     )
 
-    lines = [_HEADER, ""]
+    imports = {_PANDAS_IMPORT}
     if has_plot:
-        lines.append(_PYPLOT_IMPORT)
-    lines += [_PANDAS_IMPORT, "", load]
+        imports.add(_PYPLOT_IMPORT)
+    for action in [step.operation for step in session.steps] + [
+        layer.call for layer in session.layers
+    ]:
+        imports.update(action.code_imports)
+    lines = [_HEADER, "", *sorted(imports), "", load]
     lines += [step.to_code(variable) for step in session.steps]
     if has_plot:
         lines += ["", _CREATE_FIGURE]

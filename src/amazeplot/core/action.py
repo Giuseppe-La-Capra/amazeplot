@@ -87,6 +87,15 @@ class Action(abc.ABC):
         """Return the URL of the library function's documentation."""
         return None
 
+    @property
+    def code_imports(self) -> tuple[str, ...]:
+        """Return import statements :meth:`to_code` needs besides pandas.
+
+        The exported script includes each one once, e.g.
+        ``"import numpy as np"``.
+        """
+        return ()
+
     def __post_init__(self) -> None:
         """Reject duplicate parameter names."""
         names = [param.name for param in self.parameters]

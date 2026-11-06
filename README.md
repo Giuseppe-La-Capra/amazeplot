@@ -14,7 +14,10 @@ a graphical interface. It shows you the exact code behind every click.
   file (an undoable step).
 - An info panel under the table shows the type and statistics of the
   selected column and every value of the selected row.
-- Apply 23 DataFrame operations from a searchable toolbox: filter,
+- **Create columns** from other columns: apply a function (absolute
+  value and phase of complex numbers, real/imaginary parts, square root,
+  logarithms...) or calculate an expression such as `score / age * 100`.
+- Apply 25 DataFrame operations from a searchable toolbox: filter,
   select, drop missing values, fill, deduplicate, rename, change types,
   sort, group and aggregate, pivot, correlate and more.
 - Plot anything in the table with 13 matplotlib plot types: line,

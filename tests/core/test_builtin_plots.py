@@ -90,7 +90,9 @@ def test_generated_code_draws_the_same(call: PlotCall, people):
 
     actual = Figure().add_subplot()
     actual.plot([1, 2], [3, 4], label="reference")
-    exec(call.to_code(resolved), {"df": people.copy(), "ax": actual})
+    namespace = {"df": people.copy(), "ax": actual}
+    exec("\n".join(call.code_imports), namespace)
+    exec(call.to_code(resolved), namespace)
 
     assert _fingerprint(actual) == _fingerprint(expected)
 

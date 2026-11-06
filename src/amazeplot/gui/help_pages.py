@@ -41,6 +41,11 @@ GETTING_STARTED_STEPS: tuple[tuple[str, Mapping[str, Any]], ...] = (
 CATEGORY_INTROS: Mapping[str, str] = {
     "Select": "Keep only some of the rows or columns of the table.",
     "Clean": "Fix missing, duplicated, misnamed or wrongly typed values.",
+    "Create": (
+        "Add new columns computed from existing ones: a function of one "
+        "column (for complex numbers: absolute value, phase, real and "
+        "imaginary parts), or an expression combining several columns."
+    ),
     "Transform": "Reorder or reshape the table.",
     "Aggregate": (
         "Summarise the table: groups, counts, statistics and pivots. "

@@ -51,6 +51,10 @@ Rules:
   and implement `_execute` and `to_code` (see `GroupByOperation`).
 - Operations must **return a new DataFrame** and never use
   `inplace=True`.
+- If the generated code needs a module other than pandas (for example
+  `np.angle`), override `code_imports` to return its import statement,
+  such as `("import numpy as np",)` (see `operations/create.py`). The
+  exported script and the contract tests both use it.
 
 ## 2. Give it an example
 
