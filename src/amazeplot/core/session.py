@@ -17,6 +17,7 @@ from typing import Any
 
 import pandas as pd
 
+from amazeplot.core.action import Action
 from amazeplot.core.errors import SessionError
 from amazeplot.core.io import DataSource
 from amazeplot.core.operation import Operation
@@ -144,6 +145,25 @@ class DataSession:
             replace(current, frame=result, steps=(*current.steps, step))
         )
         return result
+
+    def perform(self, action: Action, params: Mapping[str, Any]) -> None:
+        """Apply a data operation or add a plot layer, by action type.
+
+        Raises
+        ------
+        SessionError
+            If no data has been loaded.
+        ActionError
+            If the action fails; the session is left unchanged.
+        TypeError
+            If ``action`` is neither an operation nor a plot call.
+        """
+        if isinstance(action, Operation):
+            self.apply(action, params)
+        elif isinstance(action, PlotCall):
+            self.add_layer(action, params)
+        else:
+            raise TypeError(f"Unsupported action type {type(action)!r}")
 
     # -- Plot layers -----------------------------------------------------
 

@@ -93,6 +93,9 @@ Dependencies only point **downwards**: `gui → operations → core`. See
 
 ### M2 — Usability
 
+- [x] Help menu: a worked example first, then a generated page for every
+      tool (options, example, documentation link); a Help button in
+      every tool's dialog; built-in example data.
 - [ ] Preview of the result (first 50 rows) inside the operation dialog.
 - [ ] Column context menu in the table header (sort, rename, drop,
       change type, fill missing) that reuses the same operations.

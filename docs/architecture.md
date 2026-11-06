@@ -21,6 +21,7 @@ src/amazeplot/
 │   ├── registry.py    ActionRegistry: the catalogue
 │   ├── session.py     DataSession, Step: state, history, undo/redo
 │   ├── io.py          DataSource, load_dataframe, save_dataframe
+│   ├── examples.py    built-in example data (Help → Open example data)
 │   └── codegen.py     generate_script: session -> runnable Python
 ├── operations/      # The catalogue of built-in actions (data only).
 │   ├── select.py, clean.py, transform.py, aggregate.py  (pandas)
@@ -34,6 +35,8 @@ src/amazeplot/
     ├── actions_panel.py     searchable tree of actions (the toolbox)
     ├── action_dialog.py     form generated from Action.parameters
     ├── parameter_editors.py one editor widget per ParameterKind
+    ├── help_pages.py        help pages generated from the actions (Qt-free)
+    ├── help_window.py       HelpWindow: contents tree + page browser
     └── history_panel.py     applied steps + generated script
 ```
 
@@ -147,6 +150,27 @@ ax.set_title('Mean score per city')
 plt.show()
 ```
 
+### Help
+
+The Help menu opens `HelpWindow`, which shows pages built by
+`build_help_pages(registry)`. No page is written by hand per tool:
+
+- **Getting started** runs `GETTING_STARTED_STEPS` on the example data
+  through a real `DataSession`, so the steps, the resulting table and the
+  exported script it shows are always what the app produces.
+- **Category pages** list their tools, with an introduction from
+  `CATEGORY_INTROS`.
+- **Tool pages** come from the action's metadata: description, an
+  options table (from each `Parameter`'s kind, `help`, bounds, choices
+  and default), the action's `example` with the code it runs, and a link
+  to `Action.documentation_url` (the pandas or matplotlib reference
+  page).
+
+Each action's `example` lives in the catalogue next to its declaration;
+the help shows it and the contract tests run it. The help window is a
+separate top-level window and tool dialogs are window-modal, so the help
+stays usable while a dialog is open.
+
 ## Data flow of one action
 
 1. The user activates an entry in `ActionsPanel`, which emits
@@ -155,10 +179,9 @@ plt.show()
    one `ParameterEditor` per `Parameter` via `create_editor`.
 3. As the user types, the dialog calls `resolve_params` and `to_code` to
    show a live code preview, or the validation message.
-4. On *OK*, the dialog calls the callback chosen by
-   `MainWindow._apply_callback` from the action type:
-   `session.apply(operation, values)` for an `Operation`, or
-   `session.add_layer(call, values)` for a `PlotCall`. If that raises
+4. On *OK*, the dialog calls `session.perform(action, values)`, which
+   runs `session.apply` for an `Operation` or `session.add_layer` for a
+   `PlotCall`. If that raises
    `ActionError`, the dialog shows the message and stays open.
 5. On success, the session pushes a snapshot and notifies its
    listeners. `MainWindow.refresh` then updates the table model, the
@@ -184,9 +207,11 @@ documented: the `Operation.execute` and `PlotCall.draw` boundaries.
 - `tests/core/` — fast, headless unit tests of the model layer.
 - `tests/core/test_builtin_operations.py` — the **contract test** for
   data operations. For every registered operation it applies an
-  example, executes the generated code, and asserts the two results are
-  identical. It also checks that no operation mutates its input. A new
-  operation without an example makes the suite fail.
+  `example`, executes the generated code, and asserts the two results
+  are identical. It also checks that no operation mutates its input. A
+  new operation without an example makes the suite fail.
+- `tests/core/test_examples.py` — every action's example also runs on the
+  example data, because the help pages show it applied there.
 - `tests/core/test_builtin_plots.py` — the same contract for plot calls.
   It draws each example with the GUI path and with the generated code on
   two fresh `Axes`, then compares a fingerprint of everything drawn

@@ -133,3 +133,29 @@ def test_safe_formats_do_not_ask(qtbot, session, csv_path):
     qtbot.addWidget(window)
     assert window.open_file(csv_path)
     assert confirm.questions == []
+
+
+def test_help_menu_is_last(window):
+    assert window.menu_titles() == ["&File", "&Edit", "&Help"]
+
+
+def test_show_help_opens_requested_page(window):
+    assert window.help_window is None
+    help_window = window.show_help("groupby")
+    assert help_window.isVisible()
+    assert help_window.current_key() == "groupby"
+    assert window.show_help() is help_window
+
+
+def test_action_dialog_help_button_opens_its_page(window, csv_path):
+    window.open_file(csv_path)
+    dialog = window.create_action_dialog(SCATTER)
+    assert dialog.has_help()
+    dialog.request_help()
+    assert window.help_window.current_key() == SCATTER.key
+
+
+def test_open_example_data(window, tmp_path):
+    assert window.open_example_data(tmp_path)
+    assert window.model.rowCount() == 12
+    assert "amazeplot-example.csv" in window.history_panel.script()

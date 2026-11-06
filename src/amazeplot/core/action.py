@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import abc
 from collections.abc import Hashable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from amazeplot.core.errors import ParameterError
@@ -68,6 +68,11 @@ class Action(abc.ABC):
         One or two sentences shown in the action dialog.
     parameters : tuple of Parameter
         Inputs of the action, in display order.
+    example : Mapping, optional
+        Sample parameter values for the example data (columns ``name``,
+        ``city``, ``age`` and ``score``, see :mod:`amazeplot.core.examples`).
+        The help pages show it and the contract tests run it, so every
+        built-in action must have one.
     """
 
     key: str
@@ -75,6 +80,12 @@ class Action(abc.ABC):
     category: str
     description: str
     parameters: tuple[Parameter, ...] = ()
+    example: Mapping[str, Any] | None = field(default=None, compare=False)
+
+    @property
+    def documentation_url(self) -> str | None:
+        """Return the URL of the library function's documentation."""
+        return None
 
     def __post_init__(self) -> None:
         """Reject duplicate parameter names."""

@@ -40,3 +40,18 @@ def test_error_keeps_dialog_open(qtbot):
     dialog.confirm()
     assert dialog.error_text() == "boom"
     assert dialog.result() != ActionDialog.DialogCode.Accepted
+
+
+def test_help_button_only_with_callback(qtbot):
+    assert not _dialog(qtbot, QUERY).has_help()
+    calls = []
+    dialog = ActionDialog(
+        QUERY,
+        COLUMNS,
+        lambda params: None,
+        help_callback=lambda: calls.append(1),
+    )
+    qtbot.addWidget(dialog)
+    assert dialog.has_help()
+    dialog.request_help()
+    assert calls == [1]

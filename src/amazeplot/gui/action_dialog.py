@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Hashable, Mapping, Sequence
 from typing import Any
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import (
     QDialog,
@@ -44,6 +45,9 @@ class ActionDialog(QDialog):
         Receives the entered values when the user confirms.
     parent : QWidget, optional
         Parent widget.
+    help_callback : callable, optional
+        Shows the help page of ``action``. When given, the dialog has a
+        *Help* button.
     """
 
     def __init__(
@@ -52,6 +56,8 @@ class ActionDialog(QDialog):
         columns: Sequence[Hashable],
         apply_callback: ApplyCallback,
         parent: QWidget | None = None,
+        *,
+        help_callback: Callable[[], object] | None = None,
     ) -> None:
         super().__init__(parent)
         self._action = action
@@ -95,6 +101,12 @@ class ActionDialog(QDialog):
         )
         buttons.accepted.connect(self._on_accepted)
         buttons.rejected.connect(self.reject)
+        self._help_callback = help_callback
+        if help_callback is not None:
+            buttons.addButton(QDialogButtonBox.StandardButton.Help)
+            buttons.helpRequested.connect(self.request_help)
+        # Block only the main window, so the help window stays usable.
+        self.setWindowModality(Qt.WindowModality.WindowModal)
         layout.addWidget(buttons)
 
         self._update_preview()
@@ -111,6 +123,15 @@ class ActionDialog(QDialog):
         """Fill in editors from ``values`` (e.g. to repeat an action)."""
         for name, value in values.items():
             self._editors[name].set_value(value)
+
+    def has_help(self) -> bool:
+        """Return whether the dialog offers a *Help* button."""
+        return self._help_callback is not None
+
+    def request_help(self) -> None:
+        """Show this action's help page, as the *Help* button does."""
+        if self._help_callback is not None:
+            self._help_callback()
 
     def confirm(self) -> None:
         """Behave as if the user pressed *OK*."""

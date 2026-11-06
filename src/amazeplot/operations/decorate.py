@@ -48,6 +48,7 @@ def _optional_float(name: str, label: str) -> Parameter:
 
 TITLE = AxesCall(
     key="set_title",
+    example={"label": "People", "loc": "left"},
     label="Title",
     category=CATEGORY,
     description="Set the title above the plot.",
@@ -66,6 +67,7 @@ TITLE = AxesCall(
 
 XLABEL = AxesCall(
     key="set_xlabel",
+    example={"xlabel": "Age"},
     label="X axis label",
     category=CATEGORY,
     description="Set the label of the horizontal axis.",
@@ -76,6 +78,7 @@ XLABEL = AxesCall(
 
 YLABEL = AxesCall(
     key="set_ylabel",
+    example={"ylabel": "Score"},
     label="Y axis label",
     category=CATEGORY,
     description="Set the label of the vertical axis.",
@@ -86,6 +89,7 @@ YLABEL = AxesCall(
 
 LEGEND = AxesCall(
     key="legend",
+    example={"loc": "upper left", "title": "Legend"},
     label="Legend",
     category=CATEGORY,
     description=(
@@ -107,6 +111,7 @@ LEGEND = AxesCall(
 
 GRID = AxesCall(
     key="grid",
+    example={"visible": True, "axis": "y"},
     label="Grid",
     category=CATEGORY,
     description="Show or hide grid lines.",
@@ -128,6 +133,7 @@ GRID = AxesCall(
 
 XSCALE = AxesCall(
     key="set_xscale",
+    example={"value": "log"},
     label="X axis scale",
     category=CATEGORY,
     description="Use a linear, logarithmic, ... horizontal axis.",
@@ -147,6 +153,7 @@ XSCALE = AxesCall(
 
 YSCALE = AxesCall(
     key="set_yscale",
+    example={"value": "symlog"},
     label="Y axis scale",
     category=CATEGORY,
     description="Use a linear, logarithmic, ... vertical axis.",
@@ -166,6 +173,7 @@ YSCALE = AxesCall(
 
 XLIM = AxesCall(
     key="set_xlim",
+    example={"left": 0.0, "right": 10.0},
     label="X axis range",
     category=CATEGORY,
     description="Fix the visible range of the horizontal axis.",
@@ -178,6 +186,7 @@ XLIM = AxesCall(
 
 YLIM = AxesCall(
     key="set_ylim",
+    example={"bottom": -1.0},
     label="Y axis range",
     category=CATEGORY,
     description="Fix the visible range of the vertical axis.",
@@ -190,6 +199,7 @@ YLIM = AxesCall(
 
 HLINE = AxesCall(
     key="axhline",
+    example={"y": 7.0, "linestyle": "--"},
     label="Horizontal line",
     category=CATEGORY,
     description="A horizontal reference line across the whole plot.",
@@ -205,6 +215,7 @@ HLINE = AxesCall(
 
 VLINE = AxesCall(
     key="axvline",
+    example={"x": 2.0, "color": "black"},
     label="Vertical line",
     category=CATEGORY,
     description="A vertical reference line across the whole plot.",
@@ -220,6 +231,7 @@ VLINE = AxesCall(
 
 TEXT = AxesCall(
     key="text",
+    example={"x": 1.0, "y": 2.0, "s": "Note"},
     label="Text",
     category=CATEGORY,
     description="Write text at a position given in data coordinates.",
@@ -236,6 +248,7 @@ TEXT = AxesCall(
 
 TICKS = AxesCall(
     key="tick_params",
+    example={"axis": "x", "labelrotation": 45.0},
     label="Tick labels",
     category=CATEGORY,
     description="Rotate or resize the tick labels, e.g. long bar names.",

@@ -8,6 +8,7 @@ CATEGORY = "Select"
 
 HEAD = MethodOperation(
     key="head",
+    example={"n": 2},
     label="First rows",
     category=CATEGORY,
     description="Keep only the first n rows.",
@@ -17,6 +18,7 @@ HEAD = MethodOperation(
 
 TAIL = MethodOperation(
     key="tail",
+    example={"n": 2},
     label="Last rows",
     category=CATEGORY,
     description="Keep only the last n rows.",
@@ -26,6 +28,7 @@ TAIL = MethodOperation(
 
 QUERY = MethodOperation(
     key="query",
+    example={"expr": "score > 7"},
     label="Filter rows",
     category=CATEGORY,
     description=(
@@ -47,6 +50,7 @@ QUERY = MethodOperation(
 
 SELECT_COLUMNS = MethodOperation(
     key="select_columns",
+    example={"items": ["name", "age"]},
     label="Select columns",
     category=CATEGORY,
     description="Keep only the chosen columns, in their original order.",
@@ -63,6 +67,7 @@ SELECT_COLUMNS = MethodOperation(
 
 DROP_COLUMNS = MethodOperation(
     key="drop_columns",
+    example={"columns": ["city"]},
     label="Drop columns",
     category=CATEGORY,
     description="Remove the chosen columns.",
@@ -97,6 +102,7 @@ _LARGEST_PARAMETERS = (
 
 NLARGEST = MethodOperation(
     key="nlargest",
+    example={"n": 2, "columns": ["score"]},
     label="Largest values",
     category=CATEGORY,
     description="Keep the n rows with the largest values.",
@@ -106,6 +112,7 @@ NLARGEST = MethodOperation(
 
 NSMALLEST = MethodOperation(
     key="nsmallest",
+    example={"n": 2, "columns": ["score"]},
     label="Smallest values",
     category=CATEGORY,
     description="Keep the n rows with the smallest values.",

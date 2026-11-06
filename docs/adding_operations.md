@@ -18,6 +18,7 @@ category (with its own `ACTIONS` tuple) and add it to `_MODULES` in
 # src/amazeplot/operations/transform.py
 ROUND = MethodOperation(
     key="round",                      # unique, snake_case
+    example={"decimals": 1},          # settings for the example data
     label="Round numbers",            # shown in the tree and dialog title
     category=CATEGORY,
     description="Round numeric columns to a number of decimals.",
@@ -51,18 +52,25 @@ Rules:
 - Operations must **return a new DataFrame** and never use
   `inplace=True`.
 
-## 2. Add a contract-test example
+## 2. Give it an example
 
-Add an entry to `EXAMPLES` in `tests/core/test_builtin_operations.py`:
+Every action declares an `example`: settings that work on the built-in
+example data (columns `name`, `city`, `age` and `score`, see
+`core/examples.py`), as in `example={"decimals": 1}` above. The example
+is used twice:
 
-```python
-"round": {"decimals": 1},
-```
+- the **help page** of the tool shows it with the code it runs;
+- the **contract tests** run it, on the example data and on the `people`
+  test fixture. They check that the operation applies cleanly, doesn't
+  mutate its input, and that its generated code reproduces the result
+  exactly. An action without an example fails the suite.
 
-The suite now checks that the operation runs on the shared `people`
-fixture, that it doesn't mutate its input, and that its generated code
-reproduces the result exactly. If the operation has its own logic (a
-`kwargs_builder` or a custom class), add focused unit tests too.
+If the operation has its own logic (a `kwargs_builder` or a custom
+class), add focused unit tests too.
+
+The help page itself is generated from the label, description,
+parameters (their labels and `help` texts) and example, so write those
+for end users. Nothing else is needed for the help.
 
 ## 3. Check
 
@@ -84,6 +92,7 @@ calls one `matplotlib.axes.Axes` method:
 # src/amazeplot/operations/plot.py
 VIOLIN = AxesCall(
     key="plot_violin",                # unique, snake_case
+    example={"dataset": ["age", "score"]},
     label="Violin plot",
     category=CATEGORY,
     description="Distribution shape of one or more numeric columns.",
@@ -122,18 +131,12 @@ Rules, in addition to those for data operations:
   `_draw` and `to_code`, keeping them exactly equivalent.
 - Never use `matplotlib.pyplot` outside generated code.
 
-## 2. Add a contract-test example
+## 2. Give it an example
 
-Add an entry to `EXAMPLES` in `tests/core/test_builtin_plots.py`, using
-columns of the shared `people` fixture:
-
-```python
-"plot_violin": {"dataset": ["age", "score"]},
-```
-
-The suite now checks three things: the example changes the axes, the
-generated code draws the same artists as the GUI, and the DataFrame is
-not mutated.
+As for data operations, the `example` drives both the help page and the
+contract tests. For plot calls the tests check three things: the example
+changes the axes, the generated code draws the same artists as the GUI,
+and the DataFrame is not mutated.
 
 ## 3. Check
 

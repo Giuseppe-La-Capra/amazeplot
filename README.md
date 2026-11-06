@@ -23,6 +23,9 @@ a graphical interface. It shows you the exact code behind every click.
   toolbar.
 - Export the transformed data, or export the whole session (data steps
   and figure) as a **runnable Python script** that reproduces it.
+- Built-in **help** (F1): a worked example to follow, then a page for
+  every tool with its options, an example and a link to the pandas or
+  matplotlib documentation.
 
 ## Getting started
 
@@ -146,15 +149,9 @@ same as `amazeplot`. To open a file on start-up, pass its path:
 amazeplot path/to/data.csv
 ```
 
-No data at hand? This command writes a small `demo.csv` to try:
-
-```bash
-python -c "import pandas as pd, numpy as np; rng = np.random.default_rng(0); pd.DataFrame({'city': rng.choice(['Rome', 'Oslo', 'Lima'], 200), 'age': rng.integers(18, 80, 200), 'score': rng.normal(7, 1.5, 200).round(1)}).to_csv('demo.csv', index=False)"
-```
-
-```bash
-amazeplot demo.csv
-```
+No data at hand? Choose **Help → Open example data** for a small table
+of people, then **Help → amazeplot Help** (F1) and follow the worked
+example on the first page.
 
 To also read and write Excel (`.xlsx`) and Parquet files, install the
 optional extras:
@@ -181,7 +178,11 @@ pip install -e ".[excel,parquet]"
 
 ## Usage
 
-1. **File → Open** a data file.
+**Help → amazeplot Help** (F1) opens the built-in help. Its first page
+walks through a complete example; the other pages describe every tool.
+Each tool's form also has a **Help** button that opens its page.
+
+1. **File → Open** a data file, or **Help → Open example data**.
 2. Double-click an action in the **Toolbox** on the left, fill in the
    form and press **OK**.
    - The *Select*, *Clean*, *Transform* and *Aggregate* categories change

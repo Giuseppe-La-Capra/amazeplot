@@ -7,6 +7,7 @@ CATEGORY = "Transform"
 
 SORT_VALUES = MethodOperation(
     key="sort_values",
+    example={"by": ["age"], "ascending": False},
     label="Sort rows",
     category=CATEGORY,
     description="Sort the rows by one or more columns.",
@@ -36,6 +37,7 @@ SORT_VALUES = MethodOperation(
 
 SET_INDEX = MethodOperation(
     key="set_index",
+    example={"keys": ["name"]},
     label="Set index",
     category=CATEGORY,
     description="Use one or more columns as the row index.",
@@ -58,6 +60,7 @@ SET_INDEX = MethodOperation(
 
 RESET_INDEX = MethodOperation(
     key="reset_index",
+    example={"drop": True},
     label="Reset index",
     category=CATEGORY,
     description="Replace the row index with 0, 1, 2, ...",
@@ -75,6 +78,7 @@ RESET_INDEX = MethodOperation(
 
 TRANSPOSE = MethodOperation(
     key="transpose",
+    example={},
     label="Transpose",
     category=CATEGORY,
     description="Swap rows and columns.",

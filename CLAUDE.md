@@ -67,9 +67,16 @@ Follow `docs/adding_operations.md`. In short:
   library decide"). Values equal to the default are omitted from calls
   and generated code.
 - Register the action in its module's `ACTIONS` tuple.
-- Add an example to `EXAMPLES` in `tests/core/test_builtin_operations.py`
-  (data operations) or `tests/core/test_builtin_plots.py` (plot calls).
-  The contract tests fail without one.
+- Give every action an `example=` that works on the example data
+  (`core/examples.py`: columns `name`, `city`, `age`, `score`). The
+  help pages show it and the contract tests run it; the suite fails
+  without one.
+- **Help is generated, never hand-written per tool.** Each tool's help
+  page comes from its label, description, parameter labels and `help`
+  texts, example and documentation link (`gui/help_pages.py`). Write
+  those for end users. Only the worked example on the first page
+  (`GETTING_STARTED_STEPS`) and the category introductions
+  (`CATEGORY_INTROS`) are written by hand, and they run as tests.
 
 ## Coding style
 

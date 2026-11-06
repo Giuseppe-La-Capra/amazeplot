@@ -38,6 +38,11 @@ AXES_VARIABLE = "ax"
 ExtraKwargs = Callable[[Params], dict[str, Any]]
 """Computes keyword arguments that do not come from a single widget."""
 
+MATPLOTLIB_API_URL = (
+    "https://matplotlib.org/stable/api/_as_gen/matplotlib.axes.Axes.{}.html"
+)
+"""Documentation page of an ``Axes`` method, by method name."""
+
 
 @dataclass(frozen=True)
 class ColumnRef:
@@ -183,6 +188,11 @@ class AxesCall(PlotCall):
             raise ValueError(f"Axes has no method {self.method!r}")
         for name in self.positional:
             self.parameter(name)  # Raises KeyError for unknown names.
+
+    @property
+    def documentation_url(self) -> str:
+        """Return the matplotlib documentation page of :attr:`method`."""
+        return MATPLOTLIB_API_URL.format(self.method)
 
     def build_arguments(
         self, params: Params

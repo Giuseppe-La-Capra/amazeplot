@@ -30,6 +30,11 @@ from amazeplot.core.parameters import is_empty
 KwargsBuilder = Callable[[Params], dict[str, Any]]
 """Maps resolved parameter values to pandas keyword arguments."""
 
+PANDAS_API_URL = (
+    "https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.{}.html"
+)
+"""Documentation page of a ``DataFrame`` method, by method name."""
+
 
 @dataclass(frozen=True)
 class Operation(Action):
@@ -130,6 +135,11 @@ class MethodOperation(Operation):
         super().__post_init__()
         if not callable(getattr(pd.DataFrame, self.method, None)):
             raise ValueError(f"DataFrame has no method {self.method!r}")
+
+    @property
+    def documentation_url(self) -> str:
+        """Return the pandas documentation page of :attr:`method`."""
+        return PANDAS_API_URL.format(self.method)
 
     def build_kwargs(self, params: Params) -> dict[str, Any]:
         """Return the keyword arguments passed to the pandas method."""

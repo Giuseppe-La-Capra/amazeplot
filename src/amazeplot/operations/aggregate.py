@@ -8,7 +8,11 @@ from typing import Any
 import pandas as pd
 
 from amazeplot.core.action import Params, format_call_arguments
-from amazeplot.core.operation import MethodOperation, Operation
+from amazeplot.core.operation import (
+    PANDAS_API_URL,
+    MethodOperation,
+    Operation,
+)
 from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
 from amazeplot.operations._common import AGGREGATIONS, SUBSET
 
@@ -22,6 +26,11 @@ class GroupByOperation(Operation):
     This needs a custom class because the pandas expression chains
     three calls, which :class:`MethodOperation` cannot describe.
     """
+
+    @property
+    def documentation_url(self) -> str:
+        """Return the pandas documentation page of ``groupby``."""
+        return PANDAS_API_URL.format("groupby")
 
     def _execute(
         self, frame: pd.DataFrame, params: dict[str, Any]
@@ -42,6 +51,7 @@ class GroupByOperation(Operation):
 
 GROUPBY = GroupByOperation(
     key="groupby",
+    example={"by": ["city"], "columns": ["score"], "func": "mean"},
     label="Group and aggregate",
     category=CATEGORY,
     description=(
@@ -74,6 +84,7 @@ GROUPBY = GroupByOperation(
 
 DESCRIBE = MethodOperation(
     key="describe",
+    example={},
     label="Summary statistics",
     category=CATEGORY,
     description="Count, mean, standard deviation and quantiles.",
@@ -82,6 +93,7 @@ DESCRIBE = MethodOperation(
 
 VALUE_COUNTS = MethodOperation(
     key="value_counts",
+    example={"subset": ["city"]},
     label="Count unique rows",
     category=CATEGORY,
     description="Count how often each distinct combination occurs.",
@@ -106,6 +118,7 @@ VALUE_COUNTS = MethodOperation(
 
 PIVOT_TABLE = MethodOperation(
     key="pivot_table",
+    example={"index": ["city"], "values": ["score"]},
     label="Pivot table",
     category=CATEGORY,
     description="Spreadsheet-style pivot table.",
@@ -141,6 +154,7 @@ PIVOT_TABLE = MethodOperation(
 
 CORR = MethodOperation(
     key="corr",
+    example={"numeric_only": True},
     label="Correlation matrix",
     category=CATEGORY,
     description="Pairwise correlation of columns.",

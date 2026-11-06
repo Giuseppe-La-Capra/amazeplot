@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QStandardPaths, Qt
 from PySide6.QtGui import QAction, QCloseEvent, QKeySequence
 from PySide6.QtWidgets import (
     QDockWidget,
@@ -23,9 +23,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from amazeplot import __version__
 from amazeplot.core.action import Action, Params
 from amazeplot.core.codegen import generate_script
 from amazeplot.core.errors import AmazeplotError
+from amazeplot.core.examples import write_example_data
 from amazeplot.core.io import (
     READABLE_EXTENSIONS,
     WRITABLE_EXTENSIONS,
@@ -34,12 +36,13 @@ from amazeplot.core.io import (
     save_dataframe,
 )
 from amazeplot.core.operation import Operation
-from amazeplot.core.plotting import PlotCall
 from amazeplot.core.registry import ActionRegistry
 from amazeplot.core.session import DataSession
 from amazeplot.gui.action_dialog import ActionDialog, ApplyCallback
 from amazeplot.gui.actions_panel import ActionsPanel
 from amazeplot.gui.dataframe_model import DataFrameModel
+from amazeplot.gui.help_pages import build_help_pages
+from amazeplot.gui.help_window import HelpWindow
 from amazeplot.gui.history_panel import HistoryPanel
 from amazeplot.gui.plot_panel import PlotPanel
 
@@ -92,6 +95,8 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self._confirm = confirm or self._ask_yes_no
         self._session = session
+        self._registry = registry
+        self._help_window: HelpWindow | None = None
 
         self._model = DataFrameModel(self)
         self._table = QTableView()
@@ -165,8 +170,57 @@ class MainWindow(QMainWindow):
         frame = self._session.frame
         columns = [] if frame is None else frame.columns.tolist()
         return ActionDialog(
-            action, columns, self._apply_callback(action), self
+            action,
+            columns,
+            self._apply_callback(action),
+            self,
+            help_callback=lambda: self.show_help(action.key),
         )
+
+    @property
+    def help_window(self) -> HelpWindow | None:
+        """Return the help window, once it has been opened."""
+        return self._help_window
+
+    def show_help(self, page_key: str | None = None) -> HelpWindow:
+        """Open the help window, on ``page_key`` if given.
+
+        The pages are built on first use, from the toolbox actions.
+        """
+        if self._help_window is None:
+            self._help_window = HelpWindow(build_help_pages(self._registry))
+        if page_key is not None:
+            self._help_window.show_page(page_key)
+        self._help_window.show()
+        self._help_window.raise_()
+        self._help_window.activateWindow()
+        return self._help_window
+
+    def open_example_data(self, directory: Path | str | None = None) -> bool:
+        """Write the example table to ``directory`` and open it.
+
+        By default the file goes to the application's data folder, so
+        the exported script can load it again.
+
+        Returns
+        -------
+        bool
+            Whether the example data was loaded.
+        """
+        if directory is None:
+            directory = QStandardPaths.writableLocation(
+                QStandardPaths.StandardLocation.AppLocalDataLocation
+            )
+        try:
+            path = write_example_data(directory)
+        except AmazeplotError as exc:
+            self._show_error("Cannot create the example data", str(exc))
+            return False
+        return self.open_file(path)
+
+    def menu_titles(self) -> list[str]:
+        """Return the titles of the menu bar menus (useful for tests)."""
+        return [action.text() for action in self.menuBar().actions()]
 
     def request_action(self, action: Action) -> None:
         """Ask the user for parameters and perform ``action``."""
@@ -241,6 +295,16 @@ class MainWindow(QMainWindow):
         self._redo_action.setShortcut(QKeySequence.StandardKey.Redo)
         self._redo_action.triggered.connect(self._on_redo)
 
+        self._help_action = QAction(f"{APP_NAME} &Help", self)
+        self._help_action.setShortcut(QKeySequence.StandardKey.HelpContents)
+        self._help_action.triggered.connect(self._on_help)
+
+        self._example_action = QAction("Open &example data", self)
+        self._example_action.triggered.connect(self._on_open_example)
+
+        self._about_action = QAction(f"&About {APP_NAME}", self)
+        self._about_action.triggered.connect(self._on_about)
+
     def _create_menus(self) -> None:
         file_menu = self.menuBar().addMenu("&File")
         file_menu.addAction(self._open_action)
@@ -252,6 +316,12 @@ class MainWindow(QMainWindow):
         edit_menu = self.menuBar().addMenu("&Edit")
         edit_menu.addAction(self._undo_action)
         edit_menu.addAction(self._redo_action)
+
+        help_menu = self.menuBar().addMenu("&Help")
+        help_menu.addAction(self._help_action)
+        help_menu.addAction(self._example_action)
+        help_menu.addSeparator()
+        help_menu.addAction(self._about_action)
 
         toolbar = self.addToolBar("Main")
         toolbar.setObjectName("main_toolbar")
@@ -274,18 +344,29 @@ class MainWindow(QMainWindow):
         Data operations add a step and show the table; plot calls add a
         layer and show the figure.
         """
-        if isinstance(action, Operation):
-            apply, tab = self._session.apply, self._table
-        elif isinstance(action, PlotCall):
-            apply, tab = self._session.add_layer, self.plot_panel
-        else:
-            raise TypeError(f"Unsupported action type {type(action)!r}")
+        tab = self._table if isinstance(action, Operation) else self.plot_panel
 
         def callback(params: Params) -> None:
-            apply(action, params)
+            self._session.perform(action, params)
             self._tabs.setCurrentWidget(tab)
 
         return callback
+
+    def _on_help(self) -> None:
+        self.show_help()
+
+    def _on_open_example(self) -> None:
+        self.open_example_data()
+
+    def _on_about(self) -> None:
+        QMessageBox.about(
+            self,
+            f"About {APP_NAME}",
+            f"<b>{APP_NAME}</b> {__version__}<p>Transform tables with "
+            "pandas and plot them with matplotlib, without writing code. "
+            "Every action shows the Python code it runs.</p>"
+            "<p>Press F1 for help.</p>",
+        )
 
     def _on_undo(self) -> None:
         if self._session.can_undo:
@@ -339,4 +420,6 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         """Detach from the session before the window is destroyed."""
         self._unsubscribe()
+        if self._help_window is not None:
+            self._help_window.close()
         super().closeEvent(event)

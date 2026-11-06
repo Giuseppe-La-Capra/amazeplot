@@ -55,6 +55,7 @@ def _tick_labels(params: Params) -> dict[str, Any]:
 
 LINE = AxesCall(
     key="plot_line",
+    example={"x": "age", "y": "score", "marker": "o", "label": "s"},
     label="Line",
     category=CATEGORY,
     description=(
@@ -77,6 +78,7 @@ LINE = AxesCall(
 
 SCATTER = AxesCall(
     key="plot_scatter",
+    example={"x": "age", "y": "score", "c": "score", "s": 40.0},
     label="Scatter",
     category=CATEGORY,
     description="One marker per row at (x, y), optionally coloured.",
@@ -109,6 +111,7 @@ SCATTER = AxesCall(
 
 BAR = AxesCall(
     key="plot_bar",
+    example={"x": "name", "height": "score", "color": "tab:red"},
     label="Bar chart",
     category=CATEGORY,
     description="One vertical bar per row: categories on x, heights on y.",
@@ -133,6 +136,7 @@ BAR = AxesCall(
 
 BARH = AxesCall(
     key="plot_barh",
+    example={"y": "name", "width": "score", "height": 0.5},
     label="Horizontal bar chart",
     category=CATEGORY,
     description="One horizontal bar per row: categories on y.",
@@ -157,6 +161,7 @@ BARH = AxesCall(
 
 HISTOGRAM = AxesCall(
     key="plot_hist",
+    example={"x": ["age", "score"], "bins": 5},
     label="Histogram",
     category=CATEGORY,
     description=(
@@ -193,6 +198,7 @@ HISTOGRAM = AxesCall(
 
 BOXPLOT = AxesCall(
     key="plot_box",
+    example={"x": ["age", "score"], "showmeans": True},
     label="Box plot",
     category=CATEGORY,
     description=(
@@ -215,6 +221,7 @@ BOXPLOT = AxesCall(
 
 PIE = AxesCall(
     key="plot_pie",
+    example={"x": "score", "labels": "name", "autopct": "%1.0f%%"},
     label="Pie chart",
     category=CATEGORY,
     description="Slices proportional to the values of one column.",
@@ -243,6 +250,7 @@ PIE = AxesCall(
 
 AREA = AxesCall(
     key="plot_area",
+    example={"x": "score", "y1": "age", "alpha": 0.3},
     label="Area",
     category=CATEGORY,
     description="Fill the area between two curves (or a curve and 0).",
@@ -260,6 +268,7 @@ AREA = AxesCall(
 
 STEP = AxesCall(
     key="plot_step",
+    example={"x": "score", "y": "age", "where": "mid"},
     label="Step",
     category=CATEGORY,
     description="A staircase line, for piecewise-constant data.",
@@ -284,6 +293,7 @@ STEP = AxesCall(
 
 STEM = AxesCall(
     key="plot_stem",
+    example={"heads": "score"},
     label="Stem",
     category=CATEGORY,
     description="A vertical line from the baseline to each value.",
@@ -298,6 +308,7 @@ STEM = AxesCall(
 
 ERRORBAR = AxesCall(
     key="plot_errorbar",
+    example={"x": "score", "y": "age", "yerr": "score"},
     label="Error bars",
     category=CATEGORY,
     description="Points or lines with error bars taken from columns.",
@@ -322,6 +333,7 @@ ERRORBAR = AxesCall(
 
 HEXBIN = AxesCall(
     key="plot_hexbin",
+    example={"x": "age", "y": "score", "gridsize": 5},
     label="Hexagonal density",
     category=CATEGORY,
     description="Count of points in hexagonal cells, for large scatters.",
@@ -350,6 +362,7 @@ HEXBIN = AxesCall(
 
 HEATMAP = AxesCall(
     key="plot_heatmap",
+    example={"cmap": "viridis", "aspect": "auto"},
     label="Heatmap",
     category=CATEGORY,
     description=(

@@ -1,5 +1,6 @@
 import pytest
 
+from amazeplot.core.action import Action
 from amazeplot.core.errors import ParameterError, PlotError, SessionError
 from amazeplot.core.session import DataSession
 from amazeplot.operations.clean import DROPNA, FILLNA
@@ -142,3 +143,19 @@ def test_load_resets_layers(session, people):
     session.add_layer(TITLE, {"label": "t"})
     session.load(people)
     assert session.layers == ()
+
+
+def test_perform_dispatches_by_action_type(session):
+    session.perform(DROPNA, {})
+    session.perform(TITLE, {"label": "t"})
+    assert len(session.steps) == 1
+    assert len(session.layers) == 1
+
+
+def test_perform_rejects_other_actions(session):
+    class Other(Action):
+        def to_code(self, params, variable="df"):
+            return ""
+
+    with pytest.raises(TypeError):
+        session.perform(Other("k", "K", "C", ""), {})

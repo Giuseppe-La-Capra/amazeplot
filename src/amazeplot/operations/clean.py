@@ -23,6 +23,7 @@ DTYPES = (
 
 DROPNA = MethodOperation(
     key="dropna",
+    example={"how": "any", "subset": ["age"]},
     label="Drop missing values",
     category=CATEGORY,
     description="Remove rows that contain missing values.",
@@ -50,6 +51,7 @@ def _fillna_kwargs(params: Params) -> dict[str, Any]:
 
 FILLNA = MethodOperation(
     key="fillna",
+    example={"value": "0", "column": "age"},
     label="Fill missing values",
     category=CATEGORY,
     description="Replace missing values with a constant.",
@@ -74,6 +76,7 @@ FILLNA = MethodOperation(
 
 DROP_DUPLICATES = MethodOperation(
     key="drop_duplicates",
+    example={"keep": False},
     label="Drop duplicates",
     category=CATEGORY,
     description="Remove duplicated rows.",
@@ -98,6 +101,7 @@ def _rename_kwargs(params: Params) -> dict[str, Any]:
 
 RENAME_COLUMN = MethodOperation(
     key="rename_column",
+    example={"column": "age", "new_name": "years"},
     label="Rename column",
     category=CATEGORY,
     description="Give a column a new name.",
@@ -126,6 +130,7 @@ def _astype_kwargs(params: Params) -> dict[str, Any]:
 
 ASTYPE = MethodOperation(
     key="astype",
+    example={"column": "score", "dtype": "string"},
     label="Change column type",
     category=CATEGORY,
     description="Convert a column to another data type.",
@@ -151,6 +156,7 @@ ASTYPE = MethodOperation(
 
 REPLACE = MethodOperation(
     key="replace",
+    example={"to_replace": "'Rome'", "value": "'Roma'"},
     label="Replace values",
     category=CATEGORY,
     description="Replace every occurrence of a value with another.",
