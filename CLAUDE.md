@@ -76,6 +76,9 @@ Follow `docs/adding_operations.md`. In short:
   library decide"). Values equal to the default are omitted from calls
   and generated code.
 - Register the action in its module's `ACTIONS` tuple.
+- **Every plot asks what to plot.** Its data comes from `COLUMN` or
+  `COLUMNS` parameters (X, Y, values...) chosen by the user, never
+  implicitly from "all columns" or "all numeric columns".
 - Give every action an `example=` that works on the example data
   (`core/examples.py`: columns `name`, `city`, `age`, `score`). The
   help pages show it and the contract tests run it; the suite fails

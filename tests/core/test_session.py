@@ -164,10 +164,15 @@ def test_perform_rejects_other_actions(session):
 
 def test_new_layer_is_checked_on_the_first_rows_only(people, monkeypatch):
     checked = []
-    monkeypatch.setattr(
-        type(LINE), "check", lambda call, frame, params: checked.append(frame)
-    )
+
+    def fake_check(call, frame, params, previous):
+        checked.append((frame, previous))
+
+    monkeypatch.setattr(type(LINE), "check", fake_check)
     session = DataSession()
     session.load(pd.concat([people] * 500, ignore_index=True))
-    session.add_layer(LINE, {"y": "score"})
-    assert len(checked[0]) == LAYER_CHECK_ROWS
+    first = session.add_layer(LINE, {"y": "score"})
+    session.add_layer(LINE, {"y": "age"})
+    frame, previous = checked[1]
+    assert len(frame) == LAYER_CHECK_ROWS
+    assert previous == (first,)  # Checked on top of the existing layers.

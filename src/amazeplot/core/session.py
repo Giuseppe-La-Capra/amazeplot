@@ -191,7 +191,9 @@ class DataSession:
         """
         current = self._current()
         resolved = call.resolve_params(params, current.frame.columns.tolist())
-        call.check(current.frame.head(LAYER_CHECK_ROWS), resolved)
+        call.check(
+            current.frame.head(LAYER_CHECK_ROWS), resolved, current.layers
+        )
         layer = Layer(call, resolved)
         self._push(replace(current, layers=(*current.layers, layer)))
         return layer

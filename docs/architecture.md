@@ -113,10 +113,17 @@ so a failing layer is rejected before it reaches the session.
   columns of the DataFrame (to draw), and `render_argument` turns them
   into `df['column']` source (to generate code). Drawing and code
   therefore come from one source.
-- `numeric_frame=True` passes `df.select_dtypes('number')` (heatmaps),
-  `dropna=True` appends `.dropna()` to every column (histograms and box
+- `dropna=True` appends `.dropna()` to every column (histograms and box
   plots fail on NaN), and `extra_kwargs` adds computed arguments such as
   legend labels taken from column names.
+- Calls that need several statements are custom `PlotCall` subclasses:
+  `HeatmapCall` (pivot the X, Y and Values columns into a grid, then
+  `pcolormesh` and an optional colour bar) and `ColorbarCall`
+  (`fig.colorbar` for the latest colour-coded layer). Generated code
+  can use `fig` as well as `ax`.
+- New layers are test-drawn on top of the existing layers
+  (`PlotCall.check(..., previous)`), so a decoration that builds on an
+  earlier layer, like a colour bar, is checked in context.
 
 A `Layer` is a plot call plus its resolved parameters, like `Step` for
 operations. The figure is the ordered list of layers drawn on one

@@ -22,9 +22,12 @@ a graphical interface. It shows you the exact code behind every click.
   sort, group and aggregate, pivot, correlate and more.
 - Plot anything in the table with 13 matplotlib plot types: line,
   scatter, bar, horizontal bar, histogram, box, pie, area, step, stem,
-  error bars, hexbin and heatmap.
+  error bars, hexbin and heatmap. Every plot asks which columns to use
+  (X, Y, values...). The heatmap lays a Values column out on an X × Y
+  grid; hexbin cells can show counts or the mean of a Values column.
 - Decorate the figure with titles, axis labels, a legend, a grid, log
-  scales, axis ranges, reference lines, text and rotated tick labels.
+  scales, axis ranges, reference lines, text, rotated tick labels and a
+  colour bar for colour-coded plots.
 - Plots are built from **layers** drawn on top of each other, so you can
   combine, for example, a scatter, a reference line and a legend.
 - Every action opens a form generated from its parameters, with a

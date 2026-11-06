@@ -19,6 +19,7 @@ pyplot.
 from __future__ import annotations
 
 import abc
+import contextlib
 import warnings
 from collections.abc import Callable, Hashable, Iterable, Mapping
 from dataclasses import dataclass, field
@@ -34,6 +35,9 @@ from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
 
 AXES_VARIABLE = "ax"
 """Name of the ``Axes`` variable in generated code."""
+
+FIGURE_VARIABLE = "fig"
+"""Name of the ``Figure`` variable in generated code (colour bars)."""
 
 ExtraKwargs = Callable[[Params], dict[str, Any]]
 """Computes keyword arguments that do not come from a single widget."""
@@ -70,25 +74,9 @@ class ColumnRef:
         return code + ".dropna()" if self.dropna else code
 
 
-@dataclass(frozen=True)
-class NumericFrameRef:
-    """Placeholder for the numeric columns of the whole DataFrame."""
-
-    def resolve(self, frame: pd.DataFrame) -> pd.DataFrame:
-        """Return the numeric columns of ``frame``."""
-        return frame.select_dtypes("number")
-
-    def to_code(self, variable: str) -> str:
-        """Return the source expression selecting the numeric columns."""
-        return f"{variable}.select_dtypes('number')"
-
-
-_Reference = ColumnRef | NumericFrameRef
-
-
 def resolve_argument(value: Any, frame: pd.DataFrame) -> Any:
     """Replace references in ``value`` with data from ``frame``."""
-    if isinstance(value, _Reference):
+    if isinstance(value, ColumnRef):
         return value.resolve(frame)
     if isinstance(value, list):
         return [resolve_argument(item, frame) for item in value]
@@ -97,7 +85,7 @@ def resolve_argument(value: Any, frame: pd.DataFrame) -> Any:
 
 def render_argument(value: Any, variable: str) -> str:
     """Return ``value`` as source code, rendering references."""
-    if isinstance(value, _Reference):
+    if isinstance(value, ColumnRef):
         return value.to_code(variable)
     if isinstance(value, list):
         items = ", ".join(render_argument(item, variable) for item in value)
@@ -130,19 +118,33 @@ class PlotCall(Action):
             # matplotlib/pandas failures become user-facing messages.
             raise PlotError(f"{self.label} failed: {exc}") from exc
 
-    def check(self, frame: pd.DataFrame, params: Params) -> None:
+    def check(
+        self,
+        frame: pd.DataFrame,
+        params: Params,
+        previous: Iterable[Layer] = (),
+    ) -> None:
         """Draw once on a scratch figure to detect errors early.
+
+        The ``previous`` layers are drawn first, so calls that build on
+        them (a colour bar needs a colour-mapped layer) are checked in
+        context. Failures of previous layers are ignored here: they are
+        reported when the real figure is drawn.
 
         Raises
         ------
         PlotError
-            If drawing fails.
+            If drawing this call fails.
         """
+        axes = Figure().add_subplot()
         with warnings.catch_warnings():
-            # The scratch axes are empty, so warnings such as "no
-            # artists with labels" for a legend are meaningless here.
+            # Scratch drawing: warnings such as "no artists with labels"
+            # for a legend are meaningless here.
             warnings.simplefilter("ignore")
-            self.draw(frame, params, Figure().add_subplot())
+            for layer in previous:
+                with contextlib.suppress(PlotError):
+                    layer.draw(frame, axes)
+            self.draw(frame, params, axes)
 
     @abc.abstractmethod
     def _draw(self, frame: pd.DataFrame, params: Params, axes: Axes) -> None:
@@ -165,8 +167,6 @@ class AxesCall(PlotCall):
         Name of the ``Axes`` method to call.
     positional : tuple of str
         Names of the parameters passed positionally.
-    numeric_frame : bool
-        Pass the numeric columns of the whole frame as first argument.
     dropna : bool
         Drop missing values from every referenced column (needed by
         ``hist`` and ``boxplot``, which fail on NaN).
@@ -177,7 +177,6 @@ class AxesCall(PlotCall):
 
     method: str = ""
     positional: tuple[str, ...] = ()
-    numeric_frame: bool = False
     dropna: bool = False
     extra_kwargs: ExtraKwargs | None = field(default=None, compare=False)
 
@@ -203,7 +202,7 @@ class AxesCall(PlotCall):
         :func:`resolve_argument` to obtain the data, or
         :func:`render_argument` to obtain source code.
         """
-        args: list[Any] = [NumericFrameRef()] if self.numeric_frame else []
+        args: list[Any] = []
         kwargs: dict[str, Any] = {}
         for name in self.positional:
             value = params.get(name)

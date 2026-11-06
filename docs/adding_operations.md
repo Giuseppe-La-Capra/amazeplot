@@ -128,9 +128,11 @@ Rules, in addition to those for data operations:
   the shared ones in `_common.py` (`COLOR`, `ALPHA`, `LINESTYLE`,
   `MARKER`, `COLORMAP`, ...).
 - Use `extra_kwargs` for arguments computed from other parameters (for
-  example, legend labels from column names), `numeric_frame=True` to
-  pass all numeric columns (`imshow`), and `dropna=True` when matplotlib
-  rejects missing values.
+  example, legend labels from column names), and `dropna=True` when
+  matplotlib rejects missing values.
+- **Every plot must let the user choose what to plot:** its data comes
+  from `COLUMN`/`COLUMNS` parameters (X, Y, values...), never implicitly
+  from "all columns".
 - If the drawing needs several calls, subclass `PlotCall` and implement
   `_draw` and `to_code`, keeping them exactly equivalent.
 - Never use `matplotlib.pyplot` outside generated code.

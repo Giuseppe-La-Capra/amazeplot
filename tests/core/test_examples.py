@@ -10,8 +10,9 @@ from amazeplot.core.examples import (
 )
 from amazeplot.core.io import load_dataframe
 from amazeplot.core.operation import Operation
-from amazeplot.core.plotting import PlotCall
+from amazeplot.core.plotting import Layer, PlotCall
 from amazeplot.operations import build_default_registry
+from amazeplot.operations.plot import SCATTER
 
 ACTIONS = list(build_default_registry())
 
@@ -55,4 +56,6 @@ def test_every_example_runs_on_the_example_data(action):
         action.execute(frame, params)
     else:
         assert isinstance(action, PlotCall)
-        action.check(frame, params)
+        # Decorations such as the colour bar build on an earlier layer.
+        coloured = Layer(SCATTER, {"x": "age", "y": "score", "c": "score"})
+        action.check(frame, params, previous=(coloured,))

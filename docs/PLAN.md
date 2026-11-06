@@ -137,8 +137,10 @@ Dependencies only point **downwards**: `gui → operations → core`. See
       same artists as the GUI.
 - [ ] Several subplots in a grid (`plt.subplots(nrows, ncols)`), with a
       target-axes selector in the dialog.
-- [ ] Twin y axis (`ax.twinx()`) and a colour bar for colour-mapped
-      layers (`fig.colorbar`).
+- [x] Colour bar for colour-coded layers (`fig.colorbar`).
+- [x] Heatmap of a Values column on an X × Y grid (`pivot_table` +
+      `pcolormesh`); hexbin cells coloured by a Values column.
+- [ ] Twin y axis (`ax.twinx()`).
 - [ ] Grouped plots ("one line per category" via `hue`-style splitting).
 - [ ] Figure-level options: size, DPI, style sheet (`plt.style`).
 - [x] Only re-render the figure when the Plot tab is visible.

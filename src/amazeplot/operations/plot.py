@@ -7,12 +7,23 @@ combined freely.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
-from amazeplot.core.action import Params
-from amazeplot.core.parameters import Parameter, ParameterKind
-from amazeplot.core.plotting import AxesCall
+import pandas as pd
+from matplotlib.axes import Axes
+
+from amazeplot.core.action import Params, format_call_arguments
+from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
+from amazeplot.core.plotting import (
+    AXES_VARIABLE,
+    FIGURE_VARIABLE,
+    MATPLOTLIB_API_URL,
+    AxesCall,
+    PlotCall,
+)
 from amazeplot.operations._common import (
+    AGGREGATIONS,
     ALPHA,
     COLOR,
     COLORMAP,
@@ -336,10 +347,20 @@ HEXBIN = AxesCall(
     example={"x": "age", "y": "score", "gridsize": 5},
     label="Hexagonal density",
     category=CATEGORY,
-    description="Count of points in hexagonal cells, for large scatters.",
+    description=(
+        "Hexagonal cells over X and Y, coloured by how many points fall "
+        "in each, or by the mean of a Values column. Good for large "
+        "scatters. Add Decorate > Colour bar to show the scale."
+    ),
     parameters=(
         _column("x", "X"),
         _column("y", "Y"),
+        _column(
+            "C",
+            "Values",
+            required=False,
+            help="Colour by the mean of this column instead of counts.",
+        ),
         Parameter(
             "gridsize",
             "Cells across",
@@ -360,28 +381,100 @@ HEXBIN = AxesCall(
     positional=("x", "y"),
 )
 
-HEATMAP = AxesCall(
+
+@dataclass(frozen=True)
+class HeatmapCall(PlotCall):
+    """Values laid out on an X by Y grid, one coloured cell per pair.
+
+    The rows are first arranged with ``pivot_table`` (several rows with
+    the same X and Y are combined with the chosen function), then drawn
+    with ``pcolormesh``, which accepts numeric and text categories.
+    A custom class because the code is several statements.
+    """
+
+    @property
+    def documentation_url(self) -> str:
+        """Return the matplotlib documentation page of ``pcolormesh``."""
+        return MATPLOTLIB_API_URL.format("pcolormesh")
+
+    def _draw(self, frame: pd.DataFrame, params: Params, axes: Axes) -> None:
+        grid = frame.pivot_table(
+            index=params["y"],
+            columns=params["x"],
+            values=params["values"],
+            aggfunc=params["aggfunc"],
+        )
+        mesh = axes.pcolormesh(
+            grid.columns, grid.index, grid, **_mesh_kwargs(params)
+        )
+        if params["colorbar"]:
+            axes.figure.colorbar(mesh, ax=axes, label=str(params["values"]))
+
+    def to_code(self, params: Params, variable: str = "df") -> str:
+        """Return the pivot, ``pcolormesh`` and colour-bar statements."""
+        pivot = format_call_arguments(
+            index=params["y"],
+            columns=params["x"],
+            values=params["values"],
+            aggfunc=params["aggfunc"],
+        )
+        mesh = format_call_arguments(**_mesh_kwargs(params))
+        lines = [
+            f"grid = {variable}.pivot_table({pivot})",
+            f"mesh = {AXES_VARIABLE}.pcolormesh("
+            f"grid.columns, grid.index, grid, {mesh})",
+        ]
+        if params["colorbar"]:
+            label = format_call_arguments(label=str(params["values"]))
+            lines.append(
+                f"{FIGURE_VARIABLE}.colorbar(mesh, ax={AXES_VARIABLE}, "
+                f"{label})"
+            )
+        return "\n".join(lines)
+
+
+def _mesh_kwargs(params: Params) -> dict[str, Any]:
+    """Keyword arguments of ``pcolormesh``: automatic options left out."""
+    kwargs: dict[str, Any] = {"shading": "auto"}
+    for name in ("cmap", "vmin", "vmax"):
+        if not is_empty(params[name]):
+            kwargs[name] = params[name]
+    return kwargs
+
+
+HEATMAP = HeatmapCall(
     key="plot_heatmap",
-    example={"cmap": "viridis", "aspect": "auto"},
+    example={"x": "city", "y": "name", "values": "score"},
     label="Heatmap",
     category=CATEGORY,
     description=(
-        "Draw the numeric columns of the whole table as an image, one "
-        "cell per value. Tip: apply Correlation matrix first."
+        "A grid with X across and Y down, each cell coloured by the "
+        "Values column. Rows sharing the same X and Y are combined with "
+        "the chosen function; cells without data stay empty. Tip: for "
+        "complex numbers, first create their magnitude or phase."
     ),
     parameters=(
-        COLORMAP,
+        _column("x", "X (across)"),
+        _column("y", "Y (down)"),
+        _column("values", "Values"),
         Parameter(
-            "aspect",
-            "Cell shape",
+            "aggfunc",
+            "Combine repeated cells with",
             ParameterKind.CHOICE,
-            choices=(None, "equal", "auto"),
+            default="mean",
+            required=True,
+            choices=AGGREGATIONS,
         ),
+        COLORMAP,
         Parameter("vmin", "Colour minimum", ParameterKind.FLOAT),
         Parameter("vmax", "Colour maximum", ParameterKind.FLOAT),
+        Parameter(
+            "colorbar",
+            "Show colour bar",
+            ParameterKind.BOOLEAN,
+            default=True,
+        ),
     ),
-    method="imshow",
-    numeric_frame=True,
 )
 
 ACTIONS = (
