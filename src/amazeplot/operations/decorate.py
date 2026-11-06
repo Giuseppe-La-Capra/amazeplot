@@ -6,8 +6,20 @@ and they appear in the exported script in the order they were added.
 
 from __future__ import annotations
 
-from amazeplot.core.parameters import Parameter, ParameterKind
-from amazeplot.core.plotting import AxesCall
+from dataclasses import dataclass
+from typing import Any
+
+import pandas as pd
+from matplotlib.axes import Axes
+
+from amazeplot.core.action import Params, equals_default, format_call_arguments
+from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
+from amazeplot.core.plotting import (
+    AXES_VARIABLE,
+    FIGURE_VARIABLE,
+    AxesCall,
+    PlotCall,
+)
 from amazeplot.operations._common import (
     ALPHA,
     COLOR,
@@ -273,6 +285,78 @@ TICKS = AxesCall(
     method="tick_params",
 )
 
+_COLORBAR_URL = (
+    "https://matplotlib.org/stable/api/_as_gen/"
+    "matplotlib.figure.Figure.colorbar.html"
+)
+_NO_COLOUR_LAYER = (
+    "it needs a colour-coded layer just before it: a heatmap, "
+    "hexagonal density, or a scatter coloured by a column"
+)
+
+
+@dataclass(frozen=True)
+class ColorbarCall(PlotCall):
+    """``fig.colorbar(ax.collections[-1], ax=ax, ...)``.
+
+    Shows the colour scale of the most recently drawn colour-coded
+    layer. A custom class because the call is on the figure, not on the
+    axes, and needs a check that gives a clear message.
+    """
+
+    @property
+    def documentation_url(self) -> str:
+        """Return the matplotlib documentation page of ``colorbar``."""
+        return _COLORBAR_URL
+
+    def _draw(self, frame: pd.DataFrame, params: Params, axes: Axes) -> None:
+        if not axes.collections or axes.collections[-1].get_array() is None:
+            raise ValueError(_NO_COLOUR_LAYER)
+        axes.figure.colorbar(
+            axes.collections[-1], ax=axes, **self._kwargs(params)
+        )
+
+    def to_code(self, params: Params, variable: str = "df") -> str:
+        """Return the equivalent ``fig.colorbar`` statement."""
+        extra = format_call_arguments(**self._kwargs(params))
+        return (
+            f"{FIGURE_VARIABLE}.colorbar({AXES_VARIABLE}.collections[-1], "
+            f"ax={AXES_VARIABLE}{', ' + extra if extra else ''})"
+        )
+
+    def _kwargs(self, params: Params) -> dict[str, Any]:
+        kwargs = {}
+        for param in self.parameters:
+            value = params[param.name]
+            if not is_empty(value) and not equals_default(
+                value, param.default
+            ):
+                kwargs[param.name] = value
+        return kwargs
+
+
+COLORBAR = ColorbarCall(
+    key="colorbar",
+    example={"label": "Score"},
+    label="Colour bar",
+    category=CATEGORY,
+    description=(
+        "Show the colour scale of the colour-coded layer added just "
+        "before it: a heatmap, hexagonal density, or a scatter coloured "
+        "by a column."
+    ),
+    parameters=(
+        Parameter("label", "Label", ParameterKind.TEXT),
+        Parameter(
+            "orientation",
+            "Orientation",
+            ParameterKind.CHOICE,
+            default="vertical",
+            choices=("vertical", "horizontal"),
+        ),
+    ),
+)
+
 ACTIONS = (
     TITLE,
     XLABEL,
@@ -287,4 +371,5 @@ ACTIONS = (
     VLINE,
     TEXT,
     TICKS,
+    COLORBAR,
 )

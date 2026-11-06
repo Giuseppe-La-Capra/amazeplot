@@ -8,7 +8,6 @@ from amazeplot.core.plotting import (
     AxesCall,
     ColumnRef,
     Layer,
-    NumericFrameRef,
     render_argument,
     render_layers,
     resolve_argument,
@@ -37,12 +36,6 @@ def test_column_ref(people):
     ref = ColumnRef("age", dropna=True)
     assert ref.to_code("df") == "df['age'].dropna()"
     assert len(ref.resolve(people)) == 4
-
-
-def test_numeric_frame_ref(people):
-    ref = NumericFrameRef()
-    assert ref.to_code("data") == "data.select_dtypes('number')"
-    assert list(ref.resolve(people).columns) == ["age", "score"]
 
 
 def test_render_and_resolve_nested_lists(people):

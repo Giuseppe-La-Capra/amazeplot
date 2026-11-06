@@ -7,12 +7,23 @@ combined freely.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
-from amazeplot.core.action import Params
-from amazeplot.core.parameters import Parameter, ParameterKind
-from amazeplot.core.plotting import AxesCall
+import pandas as pd
+from matplotlib.axes import Axes
+
+from amazeplot.core.action import Params, format_call_arguments
+from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
+from amazeplot.core.plotting import (
+    AXES_VARIABLE,
+    MATPLOTLIB_API_URL,
+    AxesCall,
+    FollowUp,
+    PlotCall,
+)
 from amazeplot.operations._common import (
+    AGGREGATIONS,
     ALPHA,
     COLOR,
     COLORMAP,
@@ -22,6 +33,7 @@ from amazeplot.operations._common import (
     MARKER,
     ORIENTATION,
 )
+from amazeplot.operations.decorate import COLORBAR
 
 CATEGORY = "Plot"
 
@@ -41,6 +53,46 @@ def _column(
 def _columns(name: str, label: str) -> Parameter:
     """Return a required parameter selecting several columns."""
     return Parameter(name, label, ParameterKind.COLUMNS, required=True)
+
+
+_COLOUR_BAR_OPTION = "colorbar"
+
+
+def _colour_bar_option(*, default: bool) -> Parameter:
+    """Return the tick box that adds a Colour bar layer after the plot."""
+    return Parameter(
+        _COLOUR_BAR_OPTION,
+        "Add colour bar layer",
+        ParameterKind.BOOLEAN,
+        default=default,
+        help=(
+            "Also adds a separate Colour bar layer right after this one, "
+            "which you can remove on its own."
+        ),
+    )
+
+
+def _colour_bar_follow_up(
+    column: str, *, default_label: str | None = None
+) -> FollowUp:
+    """Return the follow-up adding a Colour bar labelled after ``column``.
+
+    ``column`` names the parameter holding the colour-coded column. When
+    it is empty, the bar is labelled ``default_label`` if one is given,
+    otherwise the follow-up is skipped (e.g. a scatter with one colour).
+    """
+
+    def params(main: Params) -> dict[str, Any]:
+        value = main.get(column)
+        label = default_label if is_empty(value) else str(value)
+        return {} if label is None else {"label": label}
+
+    return FollowUp(
+        option=_COLOUR_BAR_OPTION,
+        call=COLORBAR,
+        params=params,
+        needs=None if default_label is not None else column,
+    )
 
 
 def _legend_labels(params: Params) -> dict[str, Any]:
@@ -100,6 +152,7 @@ SCATTER = AxesCall(
             help="Numeric column mapped through the colour map.",
         ),
         COLORMAP,
+        _colour_bar_option(default=False),
         COLOR,
         MARKER,
         ALPHA,
@@ -107,6 +160,7 @@ SCATTER = AxesCall(
     ),
     method="scatter",
     positional=("x", "y"),
+    follow_ups=(_colour_bar_follow_up("c"),),
 )
 
 BAR = AxesCall(
@@ -336,10 +390,20 @@ HEXBIN = AxesCall(
     example={"x": "age", "y": "score", "gridsize": 5},
     label="Hexagonal density",
     category=CATEGORY,
-    description="Count of points in hexagonal cells, for large scatters.",
+    description=(
+        "Hexagonal cells over X and Y, coloured by how many points fall "
+        "in each, or by the mean of a Values column. Good for large "
+        "scatters."
+    ),
     parameters=(
         _column("x", "X"),
         _column("y", "Y"),
+        _column(
+            "C",
+            "Values",
+            required=False,
+            help="Colour by the mean of this column instead of counts.",
+        ),
         Parameter(
             "gridsize",
             "Cells across",
@@ -355,33 +419,93 @@ HEXBIN = AxesCall(
             help="Only show cells with at least this many points.",
         ),
         COLORMAP,
+        _colour_bar_option(default=True),
     ),
     method="hexbin",
     positional=("x", "y"),
+    follow_ups=(_colour_bar_follow_up("C", default_label="Count"),),
 )
 
-HEATMAP = AxesCall(
+
+@dataclass(frozen=True)
+class HeatmapCall(PlotCall):
+    """Values laid out on an X by Y grid, one coloured cell per pair.
+
+    The rows are first arranged with ``pivot_table`` (several rows with
+    the same X and Y are combined with the chosen function), then drawn
+    with ``pcolormesh``, which accepts numeric and text categories.
+    A custom class because the code is two statements. The colour bar is
+    a separate follow-up layer, not part of this call.
+    """
+
+    @property
+    def documentation_url(self) -> str:
+        """Return the matplotlib documentation page of ``pcolormesh``."""
+        return MATPLOTLIB_API_URL.format("pcolormesh")
+
+    def _draw(self, frame: pd.DataFrame, params: Params, axes: Axes) -> None:
+        grid = frame.pivot_table(
+            index=params["y"],
+            columns=params["x"],
+            values=params["values"],
+            aggfunc=params["aggfunc"],
+        )
+        axes.pcolormesh(grid.columns, grid.index, grid, **_mesh_kwargs(params))
+
+    def to_code(self, params: Params, variable: str = "df") -> str:
+        """Return the pivot and ``pcolormesh`` statements."""
+        pivot = format_call_arguments(
+            index=params["y"],
+            columns=params["x"],
+            values=params["values"],
+            aggfunc=params["aggfunc"],
+        )
+        mesh = format_call_arguments(**_mesh_kwargs(params))
+        return (
+            f"grid = {variable}.pivot_table({pivot})\n"
+            f"{AXES_VARIABLE}.pcolormesh("
+            f"grid.columns, grid.index, grid, {mesh})"
+        )
+
+
+def _mesh_kwargs(params: Params) -> dict[str, Any]:
+    """Keyword arguments of ``pcolormesh``: automatic options left out."""
+    kwargs: dict[str, Any] = {"shading": "auto"}
+    for name in ("cmap", "vmin", "vmax"):
+        if not is_empty(params[name]):
+            kwargs[name] = params[name]
+    return kwargs
+
+
+HEATMAP = HeatmapCall(
     key="plot_heatmap",
-    example={"cmap": "viridis", "aspect": "auto"},
+    example={"x": "city", "y": "name", "values": "score"},
     label="Heatmap",
     category=CATEGORY,
     description=(
-        "Draw the numeric columns of the whole table as an image, one "
-        "cell per value. Tip: apply Correlation matrix first."
+        "A grid with X across and Y down, each cell coloured by the "
+        "Values column. Rows sharing the same X and Y are combined with "
+        "the chosen function; cells without data stay empty. Tip: for "
+        "complex numbers, first create their magnitude or phase."
     ),
     parameters=(
-        COLORMAP,
+        _column("x", "X (across)"),
+        _column("y", "Y (down)"),
+        _column("values", "Values"),
         Parameter(
-            "aspect",
-            "Cell shape",
+            "aggfunc",
+            "Combine repeated cells with",
             ParameterKind.CHOICE,
-            choices=(None, "equal", "auto"),
+            default="mean",
+            required=True,
+            choices=AGGREGATIONS,
         ),
+        COLORMAP,
         Parameter("vmin", "Colour minimum", ParameterKind.FLOAT),
         Parameter("vmax", "Colour maximum", ParameterKind.FLOAT),
+        _colour_bar_option(default=True),
     ),
-    method="imshow",
-    numeric_frame=True,
+    follow_ups=(_colour_bar_follow_up("values"),),
 )
 
 ACTIONS = (

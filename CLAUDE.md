@@ -76,6 +76,12 @@ Follow `docs/adding_operations.md`. In short:
   library decide"). Values equal to the default are omitted from calls
   and generated code.
 - Register the action in its module's `ACTIONS` tuple.
+- **Every plot asks what to plot.** Its data comes from `COLUMN` or
+  `COLUMNS` parameters (X, Y, values...) chosen by the user, never
+  implicitly from "all columns" or "all numeric columns".
+- **One layer draws one thing.** Extras such as a colour bar are never
+  drawn inside another plot call: they are separate layers, added
+  through a `FollowUp` switched on by a tick-box option.
 - Give every action an `example=` that works on the example data
   (`core/examples.py`: columns `name`, `city`, `age`, `score`). The
   help pages show it and the contract tests run it; the suite fails
@@ -145,9 +151,15 @@ Follow `docs/adding_operations.md`. In short:
 
 ## Documentation
 
-- Update `README.md` for user-visible changes, `docs/architecture.md`
-  for structural changes, and tick items off in `docs/PLAN.md` when a
-  milestone task is completed.
+- **Keep the in-app help and the docs updated with every change.**
+  - In-app help (`gui/help_pages.py`): tool pages are generated, but
+    review the hand-written parts whenever tools, categories or the
+    window change: `CATEGORY_INTROS`, the Getting started text and
+    `GETTING_STARTED_STEPS`. Check the result in the Help window.
+  - `README.md` for user-visible changes, including counts and lists of
+    tools; `docs/architecture.md` for structural changes;
+    `docs/adding_operations.md` for new conventions; tick items off in
+    `docs/PLAN.md` when a milestone task is completed.
 - Keep docstrings in sync with behaviour. An outdated docstring is a bug.
 
 ## Git

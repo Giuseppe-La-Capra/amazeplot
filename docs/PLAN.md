@@ -107,6 +107,9 @@ Dependencies only point **downwards**: `gui → operations → core`. See
       names operation.
 - [x] Complex numbers: display, `complex128` column type, and automatic
       conversion of complex numbers stored as text in CSV files.
+- [x] Create columns: a numpy function of a column (magnitude, phase,
+      real/imaginary parts, logarithms...) or an expression combining
+      columns (`DataFrame.eval`).
 - [ ] "Recent files" menu and remembered window layout (`QSettings`).
 - [ ] Clicking a history step jumps to that point (truncating redo).
 - [ ] Options in the Open dialog for the reader (separator, encoding,
@@ -122,9 +125,9 @@ Dependencies only point **downwards**: `gui → operations → core`. See
 - [x] Figures are stacks of layers on one `Axes`, stored in the session
       snapshots, so undo/redo covers data steps and plot layers alike.
 - [x] 13 plot calls (line, scatter, bar, barh, histogram, box, pie,
-      area, step, stem, error bars, hexbin, heatmap) and 13 decorations
+      area, step, stem, error bars, hexbin, heatmap) and 14 decorations
       (title, axis labels, legend, grid, scales, ranges, reference
-      lines, text, tick labels).
+      lines, text, tick labels, colour bar).
 - [x] Plot tab with a matplotlib canvas (`FigureCanvasQTAgg`), the
       standard navigation toolbar (zoom, pan, export PNG/SVG/PDF) and a
       layer list with remove/clear.
@@ -134,8 +137,12 @@ Dependencies only point **downwards**: `gui → operations → core`. See
       same artists as the GUI.
 - [ ] Several subplots in a grid (`plt.subplots(nrows, ncols)`), with a
       target-axes selector in the dialog.
-- [ ] Twin y axis (`ax.twinx()`) and a colour bar for colour-mapped
-      layers (`fig.colorbar`).
+- [x] Colour bar for colour-coded layers (`fig.colorbar`), as its own
+      layer; heatmap, hexbin and colour-coded scatter can add it as a
+      follow-up layer.
+- [x] Heatmap of a Values column on an X × Y grid (`pivot_table` +
+      `pcolormesh`); hexbin cells coloured by a Values column.
+- [ ] Twin y axis (`ax.twinx()`).
 - [ ] Grouped plots ("one line per category" via `hue`-style splitting).
 - [ ] Figure-level options: size, DPI, style sheet (`plt.style`).
 - [x] Only re-render the figure when the Plot tab is visible.

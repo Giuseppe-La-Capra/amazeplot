@@ -51,6 +51,10 @@ Rules:
   and implement `_execute` and `to_code` (see `GroupByOperation`).
 - Operations must **return a new DataFrame** and never use
   `inplace=True`.
+- If the generated code needs a module other than pandas (for example
+  `np.angle`), override `code_imports` to return its import statement,
+  such as `("import numpy as np",)` (see `operations/create.py`). The
+  exported script and the contract tests both use it.
 
 ## 2. Give it an example
 
@@ -124,9 +128,16 @@ Rules, in addition to those for data operations:
   the shared ones in `_common.py` (`COLOR`, `ALPHA`, `LINESTYLE`,
   `MARKER`, `COLORMAP`, ...).
 - Use `extra_kwargs` for arguments computed from other parameters (for
-  example, legend labels from column names), `numeric_frame=True` to
-  pass all numeric columns (`imshow`), and `dropna=True` when matplotlib
-  rejects missing values.
+  example, legend labels from column names), and `dropna=True` when
+  matplotlib rejects missing values.
+- **Every plot must let the user choose what to plot:** its data comes
+  from `COLUMN`/`COLUMNS` parameters (X, Y, values...), never implicitly
+  from "all columns".
+- **A plot call draws one thing.** If something else usually goes with
+  it (a colour bar), don't draw it inside the call: declare a
+  `FollowUp` with a BOOLEAN layer option instead, like `HEATMAP` does
+  with `_colour_bar_option` and `_colour_bar_follow_up` in
+  `operations/plot.py`. The extra then becomes its own layer.
 - If the drawing needs several calls, subclass `PlotCall` and implement
   `_draw` and `to_code`, keeping them exactly equivalent.
 - Never use `matplotlib.pyplot` outside generated code.

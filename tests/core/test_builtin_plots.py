@@ -30,6 +30,7 @@ def _round(values) -> list:
 def _fingerprint(axes: Axes) -> str:
     """Summarise everything drawn on ``axes`` as comparable text."""
     parts = [
+        len(axes.figure.axes),  # A colour bar adds axes to the figure.
         axes.get_title(),
         axes.get_title("left"),
         axes.get_xlabel(),
@@ -41,6 +42,8 @@ def _fingerprint(axes: Axes) -> str:
     ]
     for child in axes.get_children():
         parts.append(type(child).__name__)
+        if getattr(child, "get_array", None) and child.get_array() is not None:
+            parts.append(_round(child.get_array()))  # Colour data.
         if hasattr(child, "get_xydata"):
             parts.append(_round(child.get_xydata()))
         if hasattr(child, "get_offsets"):
@@ -61,10 +64,20 @@ def _fingerprint(axes: Axes) -> str:
     return repr(parts)
 
 
-def _draw_layer(call: PlotCall, frame: pd.DataFrame, params) -> Axes:
-    """Draw a reference line then ``call``, like a real figure would."""
+def _reference_axes() -> Axes:
+    """Return fresh axes with a labelled, colour-coded reference layer.
+
+    Decorations such as the legend and the colour bar build on it, like
+    they would on earlier layers of a real figure.
+    """
     axes = Figure().add_subplot()
-    axes.plot([1, 2], [3, 4], label="reference")
+    axes.scatter([1, 2], [3, 4], c=[1.0, 2.0], label="reference")
+    return axes
+
+
+def _draw_layer(call: PlotCall, frame: pd.DataFrame, params) -> Axes:
+    """Draw the reference then ``call``, like a real figure would."""
+    axes = _reference_axes()
     call.draw(frame, params, axes)
     return axes
 
@@ -77,8 +90,7 @@ def test_every_plot_call_has_an_example():
 def test_example_changes_the_axes(call: PlotCall, people):
     # Guards the contract test below against passing vacuously.
     resolved = call.resolve_params(call.example, people.columns.tolist())
-    untouched = Figure().add_subplot()
-    untouched.plot([1, 2], [3, 4], label="reference")
+    untouched = _reference_axes()
     drawn = _draw_layer(call, people, resolved)
     assert _fingerprint(drawn) != _fingerprint(untouched)
 
@@ -88,9 +100,10 @@ def test_generated_code_draws_the_same(call: PlotCall, people):
     resolved = call.resolve_params(call.example, people.columns.tolist())
     expected = _draw_layer(call, people, resolved)
 
-    actual = Figure().add_subplot()
-    actual.plot([1, 2], [3, 4], label="reference")
-    exec(call.to_code(resolved), {"df": people.copy(), "ax": actual})
+    actual = _reference_axes()
+    namespace = {"df": people.copy(), "ax": actual, "fig": actual.figure}
+    exec("\n".join(call.code_imports), namespace)
+    exec(call.to_code(resolved), namespace)
 
     assert _fingerprint(actual) == _fingerprint(expected)
 

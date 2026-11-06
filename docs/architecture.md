@@ -72,6 +72,10 @@ shared by every toolbox entry:
 - `resolve_params(params, columns)` fills in defaults, coerces and
   validates values. It raises `ParameterError`.
 - `to_code(params, variable)` returns a single Python statement.
+- `code_imports` lists any imports that statement needs besides pandas
+  (e.g. `import numpy as np` for the *Create → Apply a function* tool).
+  `generate_script` adds each one once, so the script only imports what
+  it uses.
 
 The dialog, the toolbox tree and the code preview only know about
 `Action`, so they work unchanged for data operations and plot calls.
@@ -109,10 +113,23 @@ so a failing layer is rejected before it reaches the session.
   columns of the DataFrame (to draw), and `render_argument` turns them
   into `df['column']` source (to generate code). Drawing and code
   therefore come from one source.
-- `numeric_frame=True` passes `df.select_dtypes('number')` (heatmaps),
-  `dropna=True` appends `.dropna()` to every column (histograms and box
+- `dropna=True` appends `.dropna()` to every column (histograms and box
   plots fail on NaN), and `extra_kwargs` adds computed arguments such as
   legend labels taken from column names.
+- Calls that need several statements are custom `PlotCall` subclasses:
+  `HeatmapCall` (pivot the X, Y and Values columns into a grid, then
+  `pcolormesh`) and `ColorbarCall` (`fig.colorbar` for the latest
+  colour-coded layer). Generated code can use `fig` as well as `ax`.
+- **One layer draws one thing.** Extras that belong with a plot, such as
+  the colour bar of a heatmap, are separate layers declared as
+  `FollowUp`s on the plot call. A follow-up is switched on by a BOOLEAN
+  *layer option* of the plot (e.g. *Add colour bar layer*), which is
+  never passed to matplotlib. `DataSession.add_layer` adds the plot and
+  its wanted follow-ups in one snapshot, so a single undo removes them,
+  while the layer list still lets the user remove each one.
+- New layers are test-drawn on top of the existing layers
+  (`PlotCall.check(..., previous)`), so a decoration that builds on an
+  earlier layer, like a colour bar, is checked in context.
 
 A `Layer` is a plot call plus its resolved parameters, like `Step` for
 operations. The figure is the ordered list of layers drawn on one
@@ -260,6 +277,8 @@ documented: the `Operation.execute` and `PlotCall.draw` boundaries.
   new operation without an example makes the suite fail.
 - `tests/core/test_examples.py` — every action's example also runs on the
   example data, because the help pages show it applied there.
+- `tests/core/test_plot_grids.py` — heatmap grids, hexbin values and the
+  colour bar, which need more than the generic contract test.
 - `tests/core/test_builtin_plots.py` — the same contract for plot calls.
   It draws each example with the GUI path and with the generated code on
   two fresh `Axes`, then compares a fingerprint of everything drawn

@@ -14,14 +14,21 @@ a graphical interface. It shows you the exact code behind every click.
   file (an undoable step).
 - An info panel under the table shows the type and statistics of the
   selected column and every value of the selected row.
-- Apply 23 DataFrame operations from a searchable toolbox: filter,
+- **Create columns** from other columns: apply a function (absolute
+  value and phase of complex numbers, real/imaginary parts, square root,
+  logarithms...) or calculate an expression such as `score / age * 100`.
+- Apply 25 DataFrame operations from a searchable toolbox: filter,
   select, drop missing values, fill, deduplicate, rename, change types,
   sort, group and aggregate, pivot, correlate and more.
 - Plot anything in the table with 13 matplotlib plot types: line,
   scatter, bar, horizontal bar, histogram, box, pie, area, step, stem,
-  error bars, hexbin and heatmap.
+  error bars, hexbin and heatmap. Every plot asks which columns to use
+  (X, Y, values...). The heatmap lays a Values column out on an X × Y
+  grid; hexbin cells can show counts or the mean of a Values column.
 - Decorate the figure with titles, axis labels, a legend, a grid, log
-  scales, axis ranges, reference lines, text and rotated tick labels.
+  scales, axis ranges, reference lines, text, rotated tick labels and a
+  colour bar for colour-coded plots. Heatmaps, hexbins and colour-coded
+  scatters can add their colour bar for you, as its own layer.
 - Plots are built from **layers** drawn on top of each other, so you can
   combine, for example, a scatter, a reference line and a legend.
 - Every action opens a form generated from its parameters, with a
@@ -229,11 +236,13 @@ Each tool's form also has a **Help** button that opens its page.
      index) and every value in full, handy when a column is too narrow.
 2. Double-click an action in the **Toolbox** on the left, fill in the
    form and press **OK**.
-   - The *Select*, *Clean*, *Transform* and *Aggregate* categories change
-     the data, and the **Data** tab shows the result.
+   - The *Select*, *Clean*, *Create*, *Transform* and *Aggregate*
+     categories change the data, and the **Data** tab shows the result.
+     *Create* adds new columns, e.g. the magnitude and phase of a complex
+     column, or an expression such as `score / age`.
    - The *Plot* category adds a layer to the figure, and the **Plot** tab
-     shows it. The *Decorate* category adds titles, labels, a legend and
-     so on. Layers are drawn in order: remove or clear them from the list
+     shows it. Each plot asks which columns to use. The *Decorate*
+     category adds titles, labels, a legend, a colour bar and so on. Layers are drawn in order: remove or clear them from the list
      beside the figure.
 3. Watch the applied steps and the generated code in the right panel.
 4. **Edit → Undo/Redo** with Ctrl+Z / Ctrl+Shift+Z.

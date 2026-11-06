@@ -177,10 +177,19 @@ class DataSession:
     def add_layer(self, call: PlotCall, params: Mapping[str, Any]) -> Layer:
         """Add a plot layer drawn by ``call`` on top of the others.
 
-        The call is first drawn on a scratch figure, with the first
+        Follow-up layers the call asks for (e.g. a colour bar after a
+        heatmap) are added right after it, as separate layers. The whole
+        addition is one undo step.
+
+        Each call is first drawn on a scratch figure, with the first
         :data:`LAYER_CHECK_ROWS` rows, so a failing layer is not added.
         A problem that only shows up further down the table is reported
         when the figure is drawn.
+
+        Returns
+        -------
+        Layer
+            The layer drawn by ``call`` (not its follow-ups).
 
         Raises
         ------
@@ -190,10 +199,19 @@ class DataSession:
             If the parameters are invalid or drawing fails.
         """
         current = self._current()
-        resolved = call.resolve_params(params, current.frame.columns.tolist())
-        call.check(current.frame.head(LAYER_CHECK_ROWS), resolved)
+        columns = current.frame.columns.tolist()
+        sample = current.frame.head(LAYER_CHECK_ROWS)
+        resolved = call.resolve_params(params, columns)
+        call.check(sample, resolved, current.layers)
         layer = Layer(call, resolved)
-        self._push(replace(current, layers=(*current.layers, layer)))
+        layers = (*current.layers, layer)
+        for follow_call, follow_params in call.follow_up_layers(resolved):
+            follow_resolved = follow_call.resolve_params(
+                follow_params, columns
+            )
+            follow_call.check(sample, follow_resolved, layers)
+            layers = (*layers, Layer(follow_call, follow_resolved))
+        self._push(replace(current, layers=layers))
         return layer
 
     def remove_layer(self, index: int) -> None:

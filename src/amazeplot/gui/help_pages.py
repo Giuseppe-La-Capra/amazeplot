@@ -41,20 +41,28 @@ GETTING_STARTED_STEPS: tuple[tuple[str, Mapping[str, Any]], ...] = (
 CATEGORY_INTROS: Mapping[str, str] = {
     "Select": "Keep only some of the rows or columns of the table.",
     "Clean": "Fix missing, duplicated, misnamed or wrongly typed values.",
+    "Create": (
+        "Add new columns computed from existing ones: a function of one "
+        "column (for complex numbers: absolute value, phase, real and "
+        "imaginary parts), or an expression combining several columns."
+    ),
     "Transform": "Reorder or reshape the table.",
     "Aggregate": (
         "Summarise the table: groups, counts, statistics and pivots. "
         "The summary replaces the table; undo to get the rows back."
     ),
     "Plot": (
-        "Draw the data. Each plot is a layer added to the figure in the "
+        "Draw the data. Every plot asks which columns to use (X, Y, "
+        "values...). Each plot is a layer added to the figure in the "
         "Plot tab, and layers are drawn on top of each other, so you can "
-        "combine several plots in one figure."
+        "combine several plots in one figure. Colour-coded plots can add "
+        "their colour bar as a separate layer (Add colour bar layer)."
     ),
     "Decorate": (
         "Finish the figure: titles, axis labels, a legend, a grid, "
-        "scales, ranges, reference lines and text. Decorations are "
-        "layers too, so you can undo or remove them."
+        "scales, ranges, reference lines, text, tick labels and a colour "
+        "bar for colour-coded plots. Decorations are layers too, so you "
+        "can undo or remove them."
     ),
 }
 """One-paragraph introduction of each toolbox category."""
@@ -322,7 +330,9 @@ def _what_to_enter(param: Parameter) -> str:
 
 
 def _default_text(param: Parameter) -> str:
-    if param.required:
+    # A required option with a starting value shows that value; only
+    # options the user must fill in from scratch say "required".
+    if param.required and param.default is None:
         return "required"
     return _value_text(param, param.default)
 
