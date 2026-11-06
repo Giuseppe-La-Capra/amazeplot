@@ -1,0 +1,76 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amazeplot"
+version = "0.1.0"
+description = "A desktop GUI exposing pandas and matplotlib graphically."
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.10"
+dependencies = [
+    "matplotlib>=3.10",
+    "pandas>=2.1",
+    "PySide6>=6.6",
+]
+
+[project.optional-dependencies]
+excel = ["openpyxl>=3.1"]
+parquet = ["pyarrow>=14"]
+dev = [
+    "pytest>=8",
+    "pytest-qt>=4.4",
+    "ruff>=0.5",
+]
+
+[project.gui-scripts]
+amazeplot = "amazeplot.gui.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+qt_api = "pyside6"
+
+[tool.ruff]
+# PEP 8: limit all lines to a maximum of 79 characters.
+line-length = 79
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.format]
+# Markdown examples show generated code verbatim; only format Python.
+exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors (PEP 8)
+    "W",    # pycodestyle warnings (PEP 8)
+    "F",    # pyflakes
+    "I",    # import sorting (PEP 8 import grouping)
+    "N",    # pep8-naming
+    "D",    # pydocstyle (PEP 257)
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # ruff-specific rules
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.pep8-naming]
+# Qt virtual methods must keep their camelCase names to be overridden.
+extend-ignore-names = [
+    "rowCount",
+    "columnCount",
+    "headerData",
+    "closeEvent",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
