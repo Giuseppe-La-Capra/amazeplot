@@ -25,65 +25,121 @@ a graphical interface. It shows you the exact code behind every click.
 
 ## Getting started
 
-### 1. Requirements
+amazeplot is a desktop application, so it needs Python 3.10 or newer
+and a computer with a graphical desktop: it opens a window. Follow the
+section for your operating system, then [try it](#try-it).
 
-- Python 3.10 or newer (`python --version`).
-- Windows, macOS or Linux with a desktop. amazeplot is a desktop
-  application, so it opens a window.
+### Linux
 
-### 2. Get the code
+The commands below are for Debian and Ubuntu. On other distributions,
+install the equivalent packages with your package manager.
 
-```bash
-git clone https://github.com/Giuseppe-La-Capra/amazeplot.git
-```
+1. Install Python, Git and the system libraries Qt needs to open
+   windows:
 
-```bash
-cd amazeplot
-```
+   ```bash
+   sudo apt-get update
+   ```
 
-### 3. Create a virtual environment (recommended)
+   ```bash
+   sudo apt-get install python3 python3-venv git libegl1 libgl1 libxkbcommon0 libxcb-cursor0 libfontconfig1 libdbus-1-3
+   ```
 
-A virtual environment keeps amazeplot's dependencies (pandas,
-matplotlib, PySide6) separate from your other Python projects.
+2. Get the code:
 
-```bash
-python -m venv .venv
-```
+   ```bash
+   git clone https://github.com/Giuseppe-La-Capra/amazeplot.git
+   ```
 
-Activate it on Linux or macOS:
+   ```bash
+   cd amazeplot
+   ```
 
-```bash
-source .venv/bin/activate
-```
+3. Create and activate a virtual environment. It keeps amazeplot's
+   dependencies (pandas, matplotlib, PySide6) separate from the rest of
+   your system:
 
-Activate it on Windows (PowerShell):
+   ```bash
+   python3 -m venv .venv
+   ```
 
-```powershell
-.venv\Scripts\Activate.ps1
-```
+   ```bash
+   source .venv/bin/activate
+   ```
 
-Activate it again whenever you open a new terminal to use amazeplot.
+4. Install amazeplot:
 
-### 4. Install
+   ```bash
+   pip install -e .
+   ```
 
-```bash
-pip install -e .
-```
+5. Start it:
 
-To also read and write Excel (`.xlsx`) and Parquet files:
+   ```bash
+   amazeplot
+   ```
 
-```bash
-pip install -e ".[excel,parquet]"
-```
+Next time, open a terminal in the `amazeplot` folder and run
+`source .venv/bin/activate` before `amazeplot`.
 
-### 5. Run
+### Windows
 
-```bash
-amazeplot
-```
+1. Install [Python](https://www.python.org/downloads/) (tick **Add
+   python.exe to PATH** in the installer) and
+   [Git](https://git-scm.com/download/win).
 
-`python -m amazeplot` does the same thing. To open a file on start-up,
-pass its path:
+2. Open **PowerShell** and get the code:
+
+   ```powershell
+   git clone https://github.com/Giuseppe-La-Capra/amazeplot.git
+   ```
+
+   ```powershell
+   cd amazeplot
+   ```
+
+3. Create and activate a virtual environment:
+
+   ```powershell
+   py -m venv .venv
+   ```
+
+   ```powershell
+   .venv\Scripts\Activate.ps1
+   ```
+
+   If PowerShell refuses to run the activation script, allow local
+   scripts for your user once, then activate again:
+
+   ```powershell
+   Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+   ```
+
+4. Install amazeplot:
+
+   ```powershell
+   pip install -e .
+   ```
+
+5. Start it:
+
+   ```powershell
+   amazeplot
+   ```
+
+Next time, open PowerShell in the `amazeplot` folder and run
+`.venv\Scripts\Activate.ps1` before `amazeplot`.
+
+### macOS
+
+Install Python 3 from [python.org](https://www.python.org/downloads/)
+or Homebrew, then follow the Linux steps 2 to 5. No extra system
+libraries are needed.
+
+### Try it
+
+With the virtual environment active, `python -m amazeplot` works the
+same as `amazeplot`. To open a file on start-up, pass its path:
 
 ```bash
 amazeplot path/to/data.csv
@@ -99,20 +155,24 @@ python -c "import pandas as pd, numpy as np; rng = np.random.default_rng(0); pd.
 amazeplot demo.csv
 ```
 
+To also read and write Excel (`.xlsx`) and Parquet files, install the
+optional extras:
+
+```bash
+pip install -e ".[excel,parquet]"
+```
+
 ### Troubleshooting
 
-- **`amazeplot: command not found`**: the virtual environment isn't
-  active. Activate it (step 3), or run `python -m amazeplot`.
+- **`amazeplot: command not found`** (or "not recognized" on Windows):
+  the virtual environment isn't active. Activate it (step 3), or run
+  `python -m amazeplot`.
 - **Linux: "Could not load the Qt platform plugin"** or a missing
-  `libEGL.so.1`: install the system libraries Qt needs. On
-  Debian/Ubuntu:
-
-  ```bash
-  sudo apt-get install libegl1 libgl1 libxkbcommon0 libxcb-cursor0 libfontconfig1 libdbus-1-3
-  ```
-
+  `libEGL.so.1`: the Qt system libraries from Linux step 1 are missing.
+- **Linux: `python3 -m venv` fails** saying `ensurepip` is not
+  available: install `python3-venv` (Linux step 1).
 - **Opening an `.xlsx` or `.parquet` file fails** with a message about a
-  missing module: install the optional extras (step 4).
+  missing module: install the optional extras (see [Try it](#try-it)).
 
 ## Usage
 
