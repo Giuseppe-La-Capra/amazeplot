@@ -52,14 +52,16 @@ CATEGORY_INTROS: Mapping[str, str] = {
         "The summary replaces the table; undo to get the rows back."
     ),
     "Plot": (
-        "Draw the data. Each plot is a layer added to the figure in the "
+        "Draw the data. Every plot asks which columns to use (X, Y, "
+        "values...). Each plot is a layer added to the figure in the "
         "Plot tab, and layers are drawn on top of each other, so you can "
         "combine several plots in one figure."
     ),
     "Decorate": (
         "Finish the figure: titles, axis labels, a legend, a grid, "
-        "scales, ranges, reference lines and text. Decorations are "
-        "layers too, so you can undo or remove them."
+        "scales, ranges, reference lines, text, tick labels and a colour "
+        "bar for colour-coded plots. Decorations are layers too, so you "
+        "can undo or remove them."
     ),
 }
 """One-paragraph introduction of each toolbox category."""
@@ -327,7 +329,9 @@ def _what_to_enter(param: Parameter) -> str:
 
 
 def _default_text(param: Parameter) -> str:
-    if param.required:
+    # A required option with a starting value shows that value; only
+    # options the user must fill in from scratch say "required".
+    if param.required and param.default is None:
         return "required"
     return _value_text(param, param.default)
 

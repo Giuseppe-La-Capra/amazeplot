@@ -235,11 +235,13 @@ Each tool's form also has a **Help** button that opens its page.
      index) and every value in full, handy when a column is too narrow.
 2. Double-click an action in the **Toolbox** on the left, fill in the
    form and press **OK**.
-   - The *Select*, *Clean*, *Transform* and *Aggregate* categories change
-     the data, and the **Data** tab shows the result.
+   - The *Select*, *Clean*, *Create*, *Transform* and *Aggregate*
+     categories change the data, and the **Data** tab shows the result.
+     *Create* adds new columns, e.g. the magnitude and phase of a complex
+     column, or an expression such as `score / age`.
    - The *Plot* category adds a layer to the figure, and the **Plot** tab
-     shows it. The *Decorate* category adds titles, labels, a legend and
-     so on. Layers are drawn in order: remove or clear them from the list
+     shows it. Each plot asks which columns to use. The *Decorate*
+     category adds titles, labels, a legend, a colour bar and so on. Layers are drawn in order: remove or clear them from the list
      beside the figure.
 3. Watch the applied steps and the generated code in the right panel.
 4. **Edit → Undo/Redo** with Ctrl+Z / Ctrl+Shift+Z.

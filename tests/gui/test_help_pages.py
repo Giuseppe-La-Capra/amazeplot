@@ -92,3 +92,22 @@ def test_text_is_escaped():
     page = action_page(REGISTRY.get("query"))
     assert "city == 'Rome'" not in page.html
     assert "&#x27;Rome&#x27;" in page.html
+
+
+def _option_default(page_html: str, label: str) -> str:
+    """Return the Default cell of the options-table row for ``label``."""
+    row = re.search(
+        rf"<tr><td><b>{re.escape(html.escape(label))}</b></td>"
+        r"<td>.*?</td><td>(.*?)</td></tr>",
+        page_html,
+    )
+    assert row, f"no option row for {label!r}"
+    return html.unescape(row.group(1))
+
+
+def test_required_options_show_their_starting_value():
+    page = action_page(REGISTRY.get("plot_heatmap")).html
+    assert _option_default(page, "Combine repeated cells with") == "mean"
+    assert _option_default(page, "Values") == "required"  # no start value
+    assert _option_default(page, "Colour map") == "automatic"
+    assert _option_default(page, "Show colour bar") == "ticked"

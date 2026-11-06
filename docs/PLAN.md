@@ -125,9 +125,9 @@ Dependencies only point **downwards**: `gui → operations → core`. See
 - [x] Figures are stacks of layers on one `Axes`, stored in the session
       snapshots, so undo/redo covers data steps and plot layers alike.
 - [x] 13 plot calls (line, scatter, bar, barh, histogram, box, pie,
-      area, step, stem, error bars, hexbin, heatmap) and 13 decorations
+      area, step, stem, error bars, hexbin, heatmap) and 14 decorations
       (title, axis labels, legend, grid, scales, ranges, reference
-      lines, text, tick labels).
+      lines, text, tick labels, colour bar).
 - [x] Plot tab with a matplotlib canvas (`FigureCanvasQTAgg`), the
       standard navigation toolbar (zoom, pan, export PNG/SVG/PDF) and a
       layer list with remove/clear.

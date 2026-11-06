@@ -271,6 +271,8 @@ documented: the `Operation.execute` and `PlotCall.draw` boundaries.
   new operation without an example makes the suite fail.
 - `tests/core/test_examples.py` — every action's example also runs on the
   example data, because the help pages show it applied there.
+- `tests/core/test_plot_grids.py` — heatmap grids, hexbin values and the
+  colour bar, which need more than the generic contract test.
 - `tests/core/test_builtin_plots.py` — the same contract for plot calls.
   It draws each example with the GUI path and with the generated code on
   two fresh `Axes`, then compares a fingerprint of everything drawn

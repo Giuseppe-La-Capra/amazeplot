@@ -148,9 +148,15 @@ Follow `docs/adding_operations.md`. In short:
 
 ## Documentation
 
-- Update `README.md` for user-visible changes, `docs/architecture.md`
-  for structural changes, and tick items off in `docs/PLAN.md` when a
-  milestone task is completed.
+- **Keep the in-app help and the docs updated with every change.**
+  - In-app help (`gui/help_pages.py`): tool pages are generated, but
+    review the hand-written parts whenever tools, categories or the
+    window change: `CATEGORY_INTROS`, the Getting started text and
+    `GETTING_STARTED_STEPS`. Check the result in the Help window.
+  - `README.md` for user-visible changes, including counts and lists of
+    tools; `docs/architecture.md` for structural changes;
+    `docs/adding_operations.md` for new conventions; tick items off in
+    `docs/PLAN.md` when a milestone task is completed.
 - Keep docstrings in sync with behaviour. An outdated docstring is a bug.
 
 ## Git
