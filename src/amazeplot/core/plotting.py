@@ -94,13 +94,69 @@ def render_argument(value: Any, variable: str) -> str:
 
 
 @dataclass(frozen=True)
+class FollowUp:
+    """A layer added right after another one, e.g. a heatmap's colour bar.
+
+    Each plot call draws one thing. Extras that belong with it, such as
+    a colour bar, are separate layers: they appear in the layer list,
+    can be removed on their own, and have their own line of code.
+
+    Attributes
+    ----------
+    option : str
+        Name of the BOOLEAN parameter of the main call that switches the
+        follow-up on. It is a layer option, never passed to matplotlib.
+    call : PlotCall
+        The call of the follow-up layer.
+    params : callable
+        Builds the follow-up's parameters from the main call's ones.
+    needs : str, optional
+        A parameter of the main call that must also be set, e.g. the
+        colour column of a scatter plot.
+    """
+
+    option: str
+    call: PlotCall
+    params: Callable[[Params], dict[str, Any]] = field(compare=False)
+    needs: str | None = None
+
+    def wanted(self, params: Params) -> bool:
+        """Return whether the main call's ``params`` ask for this layer."""
+        if not params.get(self.option):
+            return False
+        return self.needs is None or not is_empty(params.get(self.needs))
+
+
+@dataclass(frozen=True)
 class PlotCall(Action):
     """Base class of every action that draws on an ``Axes``.
 
     Subclasses implement :meth:`_draw` and :meth:`to_code`. Callers use
     :meth:`draw`, which converts matplotlib failures into
     :class:`PlotError`.
+
+    Attributes
+    ----------
+    follow_ups : tuple of FollowUp
+        Layers added right after this one when their option is ticked.
     """
+
+    follow_ups: tuple[FollowUp, ...] = field(default=(), compare=False)
+
+    @property
+    def layer_options(self) -> frozenset[str]:
+        """Return the parameters that only switch follow-up layers on."""
+        return frozenset(follow_up.option for follow_up in self.follow_ups)
+
+    def follow_up_layers(
+        self, params: Params
+    ) -> list[tuple[PlotCall, dict[str, Any]]]:
+        """Return the (call, raw parameters) of the wanted follow-ups."""
+        return [
+            (follow_up.call, follow_up.params(params))
+            for follow_up in self.follow_ups
+            if follow_up.wanted(params)
+        ]
 
     def draw(self, frame: pd.DataFrame, params: Params, axes: Axes) -> None:
         """Draw on ``axes`` using already-resolved parameters.
@@ -209,7 +265,9 @@ class AxesCall(PlotCall):
             if not is_empty(value):
                 args.append(self._wrap(self.parameter(name), value))
         for param in self.parameters:
-            if param.name in self.positional:
+            if param.name in self.positional or (
+                param.name in self.layer_options
+            ):
                 continue
             value = params.get(param.name, param.default)
             if is_empty(value) or equals_default(value, param.default):

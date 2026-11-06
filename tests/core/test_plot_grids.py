@@ -38,20 +38,13 @@ def test_heatmap_grid_values(grid_frame):
     assert values[0, 0] == 1.0  # mean of 0 and 2
     assert values[1, 2] == 13.0  # mean of 12 and 14
     assert np.isnan(values[2, 3])  # no data: empty cell
-    assert len(axes.figure.axes) == 2  # colour bar shown by default
+    assert len(axes.figure.axes) == 1  # the colour bar is its own layer
 
 
 def test_heatmap_combine_and_no_colour_bar(grid_frame):
-    params = {
-        "x": "j",
-        "y": "i",
-        "values": "level",
-        "aggfunc": "max",
-        "colorbar": False,
-    }
+    params = {"x": "j", "y": "i", "values": "level", "aggfunc": "max"}
     axes = _draw(HEATMAP, grid_frame, params)
     assert axes.collections[0].get_array().max() == 24.0  # cell (2, 2)
-    assert len(axes.figure.axes) == 1
 
 
 def test_heatmap_with_text_categories(people):
@@ -97,3 +90,56 @@ def test_colour_bar_needs_a_colour_coded_layer(people):
     assert layer.to_code() == (
         "fig.colorbar(ax.collections[-1], ax=ax, label='Score')"
     )
+
+
+def _labels(session):
+    return [layer.label for layer in session.layers]
+
+
+def test_heatmap_adds_a_separate_colour_bar_layer(grid_frame):
+    session = DataSession()
+    session.load(grid_frame)
+    heatmap = session.add_layer(
+        HEATMAP, {"x": "j", "y": "i", "values": "level"}
+    )
+    assert heatmap.call is HEATMAP
+    assert _labels(session) == ["Heatmap", "Colour bar"]
+    assert session.layers[1].to_code() == (
+        "fig.colorbar(ax.collections[-1], ax=ax, label='level')"
+    )
+    assert "colorbar" not in heatmap.to_code()  # not drawn by the heatmap
+
+    session.remove_layer(1)  # The colour bar can go on its own...
+    assert _labels(session) == ["Heatmap"]
+    session.undo()
+    session.undo()  # ...and adding both was a single undo step.
+    assert _labels(session) == []
+
+
+def test_colour_bar_layer_can_be_switched_off(grid_frame):
+    session = DataSession()
+    session.load(grid_frame)
+    params = {"x": "j", "y": "i", "values": "level", "colorbar": False}
+    session.add_layer(HEATMAP, params)
+    assert _labels(session) == ["Heatmap"]
+
+
+def test_scatter_adds_a_colour_bar_only_when_colour_coded(people):
+    session = DataSession()
+    session.load(people)
+    session.add_layer(SCATTER, {"x": "age", "y": "score", "colorbar": True})
+    assert _labels(session) == ["Scatter"]  # one colour: nothing to show
+    session.add_layer(
+        SCATTER, {"x": "age", "y": "score", "c": "score", "colorbar": True}
+    )
+    assert _labels(session)[-2:] == ["Scatter", "Colour bar"]
+    assert "colorbar" not in session.layers[-2].to_code()
+
+
+def test_hexbin_colour_bar_labels(grid_frame):
+    session = DataSession()
+    session.load(grid_frame)
+    session.add_layer(HEXBIN, {"x": "j", "y": "i", "gridsize": 3})
+    session.add_layer(HEXBIN, {"x": "j", "y": "i", "C": "level"})
+    bars = [layer for layer in session.layers if layer.call is COLORBAR]
+    assert [bar.params["label"] for bar in bars] == ["Count", "level"]

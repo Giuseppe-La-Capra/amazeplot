@@ -17,9 +17,9 @@ from amazeplot.core.action import Params, format_call_arguments
 from amazeplot.core.parameters import Parameter, ParameterKind, is_empty
 from amazeplot.core.plotting import (
     AXES_VARIABLE,
-    FIGURE_VARIABLE,
     MATPLOTLIB_API_URL,
     AxesCall,
+    FollowUp,
     PlotCall,
 )
 from amazeplot.operations._common import (
@@ -33,6 +33,7 @@ from amazeplot.operations._common import (
     MARKER,
     ORIENTATION,
 )
+from amazeplot.operations.decorate import COLORBAR
 
 CATEGORY = "Plot"
 
@@ -52,6 +53,46 @@ def _column(
 def _columns(name: str, label: str) -> Parameter:
     """Return a required parameter selecting several columns."""
     return Parameter(name, label, ParameterKind.COLUMNS, required=True)
+
+
+_COLOUR_BAR_OPTION = "colorbar"
+
+
+def _colour_bar_option(*, default: bool) -> Parameter:
+    """Return the tick box that adds a Colour bar layer after the plot."""
+    return Parameter(
+        _COLOUR_BAR_OPTION,
+        "Add colour bar layer",
+        ParameterKind.BOOLEAN,
+        default=default,
+        help=(
+            "Also adds a separate Colour bar layer right after this one, "
+            "which you can remove on its own."
+        ),
+    )
+
+
+def _colour_bar_follow_up(
+    column: str, *, default_label: str | None = None
+) -> FollowUp:
+    """Return the follow-up adding a Colour bar labelled after ``column``.
+
+    ``column`` names the parameter holding the colour-coded column. When
+    it is empty, the bar is labelled ``default_label`` if one is given,
+    otherwise the follow-up is skipped (e.g. a scatter with one colour).
+    """
+
+    def params(main: Params) -> dict[str, Any]:
+        value = main.get(column)
+        label = default_label if is_empty(value) else str(value)
+        return {} if label is None else {"label": label}
+
+    return FollowUp(
+        option=_COLOUR_BAR_OPTION,
+        call=COLORBAR,
+        params=params,
+        needs=None if default_label is not None else column,
+    )
 
 
 def _legend_labels(params: Params) -> dict[str, Any]:
@@ -111,6 +152,7 @@ SCATTER = AxesCall(
             help="Numeric column mapped through the colour map.",
         ),
         COLORMAP,
+        _colour_bar_option(default=False),
         COLOR,
         MARKER,
         ALPHA,
@@ -118,6 +160,7 @@ SCATTER = AxesCall(
     ),
     method="scatter",
     positional=("x", "y"),
+    follow_ups=(_colour_bar_follow_up("c"),),
 )
 
 BAR = AxesCall(
@@ -350,7 +393,7 @@ HEXBIN = AxesCall(
     description=(
         "Hexagonal cells over X and Y, coloured by how many points fall "
         "in each, or by the mean of a Values column. Good for large "
-        "scatters. Add Decorate > Colour bar to show the scale."
+        "scatters."
     ),
     parameters=(
         _column("x", "X"),
@@ -376,9 +419,11 @@ HEXBIN = AxesCall(
             help="Only show cells with at least this many points.",
         ),
         COLORMAP,
+        _colour_bar_option(default=True),
     ),
     method="hexbin",
     positional=("x", "y"),
+    follow_ups=(_colour_bar_follow_up("C", default_label="Count"),),
 )
 
 
@@ -389,7 +434,8 @@ class HeatmapCall(PlotCall):
     The rows are first arranged with ``pivot_table`` (several rows with
     the same X and Y are combined with the chosen function), then drawn
     with ``pcolormesh``, which accepts numeric and text categories.
-    A custom class because the code is several statements.
+    A custom class because the code is two statements. The colour bar is
+    a separate follow-up layer, not part of this call.
     """
 
     @property
@@ -404,14 +450,10 @@ class HeatmapCall(PlotCall):
             values=params["values"],
             aggfunc=params["aggfunc"],
         )
-        mesh = axes.pcolormesh(
-            grid.columns, grid.index, grid, **_mesh_kwargs(params)
-        )
-        if params["colorbar"]:
-            axes.figure.colorbar(mesh, ax=axes, label=str(params["values"]))
+        axes.pcolormesh(grid.columns, grid.index, grid, **_mesh_kwargs(params))
 
     def to_code(self, params: Params, variable: str = "df") -> str:
-        """Return the pivot, ``pcolormesh`` and colour-bar statements."""
+        """Return the pivot and ``pcolormesh`` statements."""
         pivot = format_call_arguments(
             index=params["y"],
             columns=params["x"],
@@ -419,18 +461,11 @@ class HeatmapCall(PlotCall):
             aggfunc=params["aggfunc"],
         )
         mesh = format_call_arguments(**_mesh_kwargs(params))
-        lines = [
-            f"grid = {variable}.pivot_table({pivot})",
-            f"mesh = {AXES_VARIABLE}.pcolormesh("
-            f"grid.columns, grid.index, grid, {mesh})",
-        ]
-        if params["colorbar"]:
-            label = format_call_arguments(label=str(params["values"]))
-            lines.append(
-                f"{FIGURE_VARIABLE}.colorbar(mesh, ax={AXES_VARIABLE}, "
-                f"{label})"
-            )
-        return "\n".join(lines)
+        return (
+            f"grid = {variable}.pivot_table({pivot})\n"
+            f"{AXES_VARIABLE}.pcolormesh("
+            f"grid.columns, grid.index, grid, {mesh})"
+        )
 
 
 def _mesh_kwargs(params: Params) -> dict[str, Any]:
@@ -468,13 +503,9 @@ HEATMAP = HeatmapCall(
         COLORMAP,
         Parameter("vmin", "Colour minimum", ParameterKind.FLOAT),
         Parameter("vmax", "Colour maximum", ParameterKind.FLOAT),
-        Parameter(
-            "colorbar",
-            "Show colour bar",
-            ParameterKind.BOOLEAN,
-            default=True,
-        ),
+        _colour_bar_option(default=True),
     ),
+    follow_ups=(_colour_bar_follow_up("values"),),
 )
 
 ACTIONS = (

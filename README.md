@@ -27,7 +27,8 @@ a graphical interface. It shows you the exact code behind every click.
   grid; hexbin cells can show counts or the mean of a Values column.
 - Decorate the figure with titles, axis labels, a legend, a grid, log
   scales, axis ranges, reference lines, text, rotated tick labels and a
-  colour bar for colour-coded plots.
+  colour bar for colour-coded plots. Heatmaps, hexbins and colour-coded
+  scatters can add their colour bar for you, as its own layer.
 - Plots are built from **layers** drawn on top of each other, so you can
   combine, for example, a scatter, a reference line and a legend.
 - Every action opens a form generated from its parameters, with a

@@ -118,9 +118,15 @@ so a failing layer is rejected before it reaches the session.
   legend labels taken from column names.
 - Calls that need several statements are custom `PlotCall` subclasses:
   `HeatmapCall` (pivot the X, Y and Values columns into a grid, then
-  `pcolormesh` and an optional colour bar) and `ColorbarCall`
-  (`fig.colorbar` for the latest colour-coded layer). Generated code
-  can use `fig` as well as `ax`.
+  `pcolormesh`) and `ColorbarCall` (`fig.colorbar` for the latest
+  colour-coded layer). Generated code can use `fig` as well as `ax`.
+- **One layer draws one thing.** Extras that belong with a plot, such as
+  the colour bar of a heatmap, are separate layers declared as
+  `FollowUp`s on the plot call. A follow-up is switched on by a BOOLEAN
+  *layer option* of the plot (e.g. *Add colour bar layer*), which is
+  never passed to matplotlib. `DataSession.add_layer` adds the plot and
+  its wanted follow-ups in one snapshot, so a single undo removes them,
+  while the layer list still lets the user remove each one.
 - New layers are test-drawn on top of the existing layers
   (`PlotCall.check(..., previous)`), so a decoration that builds on an
   earlier layer, like a colour bar, is checked in context.

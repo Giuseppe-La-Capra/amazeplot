@@ -79,6 +79,9 @@ Follow `docs/adding_operations.md`. In short:
 - **Every plot asks what to plot.** Its data comes from `COLUMN` or
   `COLUMNS` parameters (X, Y, values...) chosen by the user, never
   implicitly from "all columns" or "all numeric columns".
+- **One layer draws one thing.** Extras such as a colour bar are never
+  drawn inside another plot call: they are separate layers, added
+  through a `FollowUp` switched on by a tick-box option.
 - Give every action an `example=` that works on the example data
   (`core/examples.py`: columns `name`, `city`, `age`, `score`). The
   help pages show it and the contract tests run it; the suite fails

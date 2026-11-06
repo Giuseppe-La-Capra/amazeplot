@@ -133,6 +133,11 @@ Rules, in addition to those for data operations:
 - **Every plot must let the user choose what to plot:** its data comes
   from `COLUMN`/`COLUMNS` parameters (X, Y, values...), never implicitly
   from "all columns".
+- **A plot call draws one thing.** If something else usually goes with
+  it (a colour bar), don't draw it inside the call: declare a
+  `FollowUp` with a BOOLEAN layer option instead, like `HEATMAP` does
+  with `_colour_bar_option` and `_colour_bar_follow_up` in
+  `operations/plot.py`. The extra then becomes its own layer.
 - If the drawing needs several calls, subclass `PlotCall` and implement
   `_draw` and `to_code`, keeping them exactly equivalent.
 - Never use `matplotlib.pyplot` outside generated code.

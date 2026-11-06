@@ -137,7 +137,9 @@ Dependencies only point **downwards**: `gui → operations → core`. See
       same artists as the GUI.
 - [ ] Several subplots in a grid (`plt.subplots(nrows, ncols)`), with a
       target-axes selector in the dialog.
-- [x] Colour bar for colour-coded layers (`fig.colorbar`).
+- [x] Colour bar for colour-coded layers (`fig.colorbar`), as its own
+      layer; heatmap, hexbin and colour-coded scatter can add it as a
+      follow-up layer.
 - [x] Heatmap of a Values column on an X × Y grid (`pivot_table` +
       `pcolormesh`); hexbin cells coloured by a Values column.
 - [ ] Twin y axis (`ax.twinx()`).

@@ -55,7 +55,8 @@ CATEGORY_INTROS: Mapping[str, str] = {
         "Draw the data. Every plot asks which columns to use (X, Y, "
         "values...). Each plot is a layer added to the figure in the "
         "Plot tab, and layers are drawn on top of each other, so you can "
-        "combine several plots in one figure."
+        "combine several plots in one figure. Colour-coded plots can add "
+        "their colour bar as a separate layer (Add colour bar layer)."
     ),
     "Decorate": (
         "Finish the figure: titles, axis labels, a legend, a grid, "

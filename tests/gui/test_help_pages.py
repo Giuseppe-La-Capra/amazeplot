@@ -110,4 +110,4 @@ def test_required_options_show_their_starting_value():
     assert _option_default(page, "Combine repeated cells with") == "mean"
     assert _option_default(page, "Values") == "required"  # no start value
     assert _option_default(page, "Colour map") == "automatic"
-    assert _option_default(page, "Show colour bar") == "ticked"
+    assert _option_default(page, "Add colour bar layer") == "ticked"
