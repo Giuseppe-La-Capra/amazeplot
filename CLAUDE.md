@@ -34,24 +34,29 @@ and `python -m pytest` must pass.
    - Never import `matplotlib.pyplot` in the package: it holds global
      state. Use `matplotlib.figure.Figure`/`Axes` in the core and
      `backend_qtagg` in the GUI. Only *generated scripts* use pyplot.
-2. **The `DataSession` is the single source of truth.** That includes
+2. **Never hand a whole DataFrame to Qt.** The Data tab shows one
+   `RowWindow` slice (`gui/row_window.py`, `gui/data_view.py`), and
+   expensive views (the figure) are only redrawn while visible. Measure
+   with a table of a few million rows before adding a view that touches
+   every row.
+3. **The `DataSession` is the single source of truth.** That includes
    the plot layers. Views never keep their own copy of the state. They
    subscribe and redraw in `refresh()`. Every change pushes an immutable
    snapshot, so undo/redo must keep working for any new kind of state.
-3. **Actions are declarative.** Each one is described by `Parameter`
+4. **Actions are declarative.** Each one is described by `Parameter`
    metadata, and the GUI builds its forms from that metadata. Never
    write a dialog by hand for a single action.
-4. **Execution and code generation share one source.** For
+5. **Execution and code generation share one source.** For
    `MethodOperation` both come from `build_kwargs`, and for `AxesCall`
    both come from `build_arguments` (with `ColumnRef` placeholders).
    Custom subclasses must keep `_execute`/`_draw` and `to_code` exactly
    equivalent.
-5. **Never mutate the input DataFrame.** Operations return a new frame,
+6. **Never mutate the input DataFrame.** Operations return a new frame,
    plot calls only read it, and `inplace=True` is forbidden.
-6. **No global mutable state.** Pass `OperationRegistry` and
+7. **No global mutable state.** Pass `OperationRegistry` and
    `DataSession` in explicitly (dependency injection). There are no
    module-level singletons.
-7. **Formats that execute code when read need explicit consent.**
+8. **Formats that execute code when read need explicit consent.**
    Pickles (`.pkl`, `.pickle`) are listed in `UNSAFE_EXTENSIONS` in
    `core/io.py`. Code that loads a user-chosen file must check
    `executes_code_on_read(path)` and ask the user first, with "No" as

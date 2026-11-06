@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 from amazeplot.core.io import save_dataframe
@@ -159,3 +160,25 @@ def test_open_example_data(window, tmp_path):
     assert window.open_example_data(tmp_path)
     assert window.model.rowCount() == 12
     assert "amazeplot-example.csv" in window.history_panel.script()
+
+
+def test_plot_is_drawn_only_when_visible(window, session, csv_path):
+    window.open_file(csv_path)
+    session.add_layer(SCATTER, {"x": "age", "y": "score"})
+    assert window.current_tab() == DATA_TAB
+    assert window.plot_is_stale()
+    assert window.plot_panel.layer_labels() == ["1. Scatter"]
+    assert window.plot_panel.axes() is None  # Not drawn while hidden.
+
+    window.show_tab(PLOT_TAB)
+    assert not window.plot_is_stale()
+    assert len(window.plot_panel.axes().collections) == 1
+
+
+def test_opening_a_file_starts_at_the_first_row(window, tmp_path):
+    big = tmp_path / "big.csv"
+    pd.DataFrame({"n": range(3_000)}).to_csv(big, index=False)
+    window.open_file(big)
+    window.data_view.next_page()
+    window.open_file(big)
+    assert window.data_view.window.start == 0

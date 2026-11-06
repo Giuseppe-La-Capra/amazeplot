@@ -1,8 +1,9 @@
+import pandas as pd
 import pytest
 
 from amazeplot.core.action import Action
 from amazeplot.core.errors import ParameterError, PlotError, SessionError
-from amazeplot.core.session import DataSession
+from amazeplot.core.session import LAYER_CHECK_ROWS, DataSession
 from amazeplot.operations.clean import DROPNA, FILLNA
 from amazeplot.operations.decorate import TITLE
 from amazeplot.operations.plot import LINE, SCATTER
@@ -159,3 +160,14 @@ def test_perform_rejects_other_actions(session):
 
     with pytest.raises(TypeError):
         session.perform(Other("k", "K", "C", ""), {})
+
+
+def test_new_layer_is_checked_on_the_first_rows_only(people, monkeypatch):
+    checked = []
+    monkeypatch.setattr(
+        type(LINE), "check", lambda call, frame, params: checked.append(frame)
+    )
+    session = DataSession()
+    session.load(pd.concat([people] * 500, ignore_index=True))
+    session.add_layer(LINE, {"y": "score"})
+    assert len(checked[0]) == LAYER_CHECK_ROWS

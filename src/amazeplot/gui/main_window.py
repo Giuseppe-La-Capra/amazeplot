@@ -18,7 +18,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QMessageBox,
-    QTableView,
     QTabWidget,
     QWidget,
 )
@@ -40,6 +39,7 @@ from amazeplot.core.registry import ActionRegistry
 from amazeplot.core.session import DataSession
 from amazeplot.gui.action_dialog import ActionDialog, ApplyCallback
 from amazeplot.gui.actions_panel import ActionsPanel
+from amazeplot.gui.data_view import DataView
 from amazeplot.gui.dataframe_model import DataFrameModel
 from amazeplot.gui.help_pages import build_help_pages
 from amazeplot.gui.help_window import HelpWindow
@@ -98,10 +98,9 @@ class MainWindow(QMainWindow):
         self._registry = registry
         self._help_window: HelpWindow | None = None
 
-        self._model = DataFrameModel(self)
-        self._table = QTableView()
-        self._table.setModel(self._model)
-        self._table.setAlternatingRowColors(True)
+        self.data_view = DataView()
+        # Drawing is deferred while the Plot tab is hidden: see refresh().
+        self._plot_stale = False
 
         self.plot_panel = PlotPanel()
         self.plot_panel.remove_layer_requested.connect(
@@ -110,8 +109,9 @@ class MainWindow(QMainWindow):
         self.plot_panel.clear_requested.connect(self._session.clear_layers)
 
         self._tabs = QTabWidget()
-        self._tabs.addTab(self._table, DATA_TAB)
+        self._tabs.addTab(self.data_view, DATA_TAB)
         self._tabs.addTab(self.plot_panel, PLOT_TAB)
+        self._tabs.currentChanged.connect(self._on_tab_changed)
         self.setCentralWidget(self._tabs)
 
         self.actions_panel = ActionsPanel(registry)
@@ -134,8 +134,12 @@ class MainWindow(QMainWindow):
 
     @property
     def model(self) -> DataFrameModel:
-        """Return the table model, mainly for tests."""
-        return self._model
+        """Return the table model (the visible rows), mainly for tests."""
+        return self.data_view.model
+
+    def plot_is_stale(self) -> bool:
+        """Return whether the figure awaits redrawing (useful for tests)."""
+        return self._plot_stale
 
     def open_file(self, path: Path | str) -> bool:
         """Load ``path`` into the session; report errors to the user.
@@ -159,7 +163,22 @@ class MainWindow(QMainWindow):
             self._show_error("Cannot open file", str(exc))
             return False
         self._session.load(frame, source)
+        self.data_view.go_to_row(1)
         return True
+
+    def show_tab(self, title: str) -> None:
+        """Make the central tab called ``title`` visible.
+
+        Raises
+        ------
+        KeyError
+            If there is no tab with that title.
+        """
+        for index in range(self._tabs.count()):
+            if self._tabs.tabText(index) == title:
+                self._tabs.setCurrentIndex(index)
+                return
+        raise KeyError(f"No tab called {title!r}")
 
     def current_tab(self) -> str:
         """Return the title of the visible central tab."""
@@ -234,8 +253,8 @@ class MainWindow(QMainWindow):
     def refresh(self) -> None:
         """Redraw every view from the session state."""
         frame = self._session.frame
-        self._model.set_frame(frame)
-        self.plot_panel.show_plot(frame, self._session.layers)
+        self.data_view.set_frame(frame)
+        self._refresh_plot()
         self.history_panel.set_history(
             self._session.steps, generate_script(self._session)
         )
@@ -252,7 +271,7 @@ class MainWindow(QMainWindow):
             self._shape_label.setText("Open a data file to start.")
         else:
             rows, columns = frame.shape
-            self._shape_label.setText(f"{rows} rows x {columns} columns")
+            self._shape_label.setText(f"{rows:,} rows x {columns:,} columns")
 
     def status_text(self) -> str:
         """Return the text of the status bar, mainly for tests."""
@@ -344,13 +363,33 @@ class MainWindow(QMainWindow):
         Data operations add a step and show the table; plot calls add a
         layer and show the figure.
         """
-        tab = self._table if isinstance(action, Operation) else self.plot_panel
+        is_operation = isinstance(action, Operation)
+        tab = self.data_view if is_operation else self.plot_panel
 
         def callback(params: Params) -> None:
             self._session.perform(action, params)
             self._tabs.setCurrentWidget(tab)
 
         return callback
+
+    def _refresh_plot(self) -> None:
+        """Redraw the figure now if it is visible, otherwise later.
+
+        Drawing every layer over a large table can take seconds, so a
+        hidden figure is only marked stale; :meth:`_on_tab_changed`
+        draws it when the Plot tab is shown.
+        """
+        layers = self._session.layers
+        if self._tabs.currentWidget() is self.plot_panel:
+            self.plot_panel.show_plot(self._session.frame, layers)
+            self._plot_stale = False
+        else:
+            self.plot_panel.set_layers(layers)
+            self._plot_stale = True
+
+    def _on_tab_changed(self, index: int) -> None:
+        if self._plot_stale and self._tabs.widget(index) is self.plot_panel:
+            self._refresh_plot()
 
     def _on_help(self) -> None:
         self.show_help()

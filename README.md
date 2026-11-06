@@ -182,7 +182,12 @@ pip install -e ".[excel,parquet]"
 walks through a complete example; the other pages describe every tool.
 Each tool's form also has a **Help** button that opens its page.
 
-1. **File → Open** a data file, or **Help → Open example data**.
+1. **File → Open** a data file, or **Help → Open example data**. The
+   **Data** tab shows the table one page at a time, so even millions of
+   rows stay responsive. Use the bar above the table to choose the first
+   row (**Rows from**), the **Rows per page** (100 to 100,000), or move
+   with **Previous** and **Next**. Tools always work on the whole table,
+   not just the visible page.
 2. Double-click an action in the **Toolbox** on the left, fill in the
    form and press **OK**.
    - The *Select*, *Clean*, *Transform* and *Aggregate* categories change

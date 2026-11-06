@@ -132,7 +132,7 @@ Dependencies only point **downwards**: `gui → operations → core`. See
       layers (`fig.colorbar`).
 - [ ] Grouped plots ("one line per category" via `hue`-style splitting).
 - [ ] Figure-level options: size, DPI, style sheet (`plt.style`).
-- [ ] Only re-render the figure when the Plot tab is visible.
+- [x] Only re-render the figure when the Plot tab is visible.
 
 ### M4 — Multiple datasets
 
@@ -143,6 +143,11 @@ Dependencies only point **downwards**: `gui → operations → core`. See
 
 ### M5 — Scale and robustness
 
+- [x] The Data tab shows one page of rows (chosen from a bar above the
+      table), so tables of millions of rows stay responsive.
+- [x] New plot layers are checked on the first 1,000 rows only.
+- [ ] Plot large tables from a sample (e.g. a "Sample rows" operation),
+      since matplotlib needs seconds to draw millions of points.
 - [ ] Run operations in a worker thread (`QThreadPool`) with a busy
       indicator and cancellation, so the UI never freezes.
 - [ ] A memory budget for the history: drop the oldest snapshots and

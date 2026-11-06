@@ -30,6 +30,8 @@ src/amazeplot/
 └── gui/             # View/controller layer. PySide6.
     ├── app.py               main(): wiring + exception hook
     ├── main_window.py       MainWindow: controller, tabs, menus, docks
+    ├── data_view.py         Data tab: row-navigation bar + table
+    ├── row_window.py        RowWindow: which rows are shown (Qt-free)
     ├── dataframe_model.py   DataFrameModel: QAbstractTableModel
     ├── plot_panel.py        matplotlib canvas, toolbar, layer list
     ├── actions_panel.py     searchable tree of actions (the toolbox)
@@ -149,6 +151,25 @@ ax.bar(df['city'], df['score'], color='tab:green')
 ax.set_title('Mean score per city')
 plt.show()
 ```
+
+### Large tables
+
+The GUI never hands a whole DataFrame to Qt:
+
+- **Data tab.** `DataView` gives the table model only the rows of the
+  current `RowWindow` (`frame.iloc[start:stop]`, a cheap view). The bar
+  above the table changes the window: first row, page size (100 to
+  100,000) and Previous/Next. After a data step the position is kept
+  (clamped to the new length); opening a file goes back to row 1.
+- **Plot tab.** Drawing every layer over millions of rows can take
+  seconds, so `MainWindow` only redraws the figure while the Plot tab is
+  visible. Changes made elsewhere just update the layer list and mark
+  the figure stale; it is drawn when the tab is shown.
+- **New layers** are test-drawn on the first `LAYER_CHECK_ROWS` rows
+  (1,000), not on the whole table.
+
+Operations always run on the whole DataFrame; only the display is
+sliced.
 
 ### Help
 

@@ -25,6 +25,13 @@ from amazeplot.core.plotting import Layer, PlotCall
 
 Listener = Callable[[], None]
 
+LAYER_CHECK_ROWS = 1_000
+"""Rows used to test-draw a new plot layer before accepting it.
+
+Drawing the whole of a large table only to detect a wrong column type or
+colour would take seconds; the first rows reveal those mistakes.
+"""
+
 
 @dataclass(frozen=True)
 class Step:
@@ -170,8 +177,10 @@ class DataSession:
     def add_layer(self, call: PlotCall, params: Mapping[str, Any]) -> Layer:
         """Add a plot layer drawn by ``call`` on top of the others.
 
-        The call is first drawn on a scratch figure, so a failing layer
-        is never added.
+        The call is first drawn on a scratch figure, with the first
+        :data:`LAYER_CHECK_ROWS` rows, so a failing layer is not added.
+        A problem that only shows up further down the table is reported
+        when the figure is drawn.
 
         Raises
         ------
@@ -182,7 +191,7 @@ class DataSession:
         """
         current = self._current()
         resolved = call.resolve_params(params, current.frame.columns.tolist())
-        call.check(current.frame, resolved)
+        call.check(current.frame.head(LAYER_CHECK_ROWS), resolved)
         layer = Layer(call, resolved)
         self._push(replace(current, layers=(*current.layers, layer)))
         return layer

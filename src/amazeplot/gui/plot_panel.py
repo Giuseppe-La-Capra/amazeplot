@@ -97,7 +97,7 @@ class PlotPanel(QWidget):
             except PlotError as exc:
                 message, is_error = str(exc), True
         self._show_message(message, is_error=is_error)
-        self._set_layers(layers)
+        self.set_layers(layers)
         self._canvas.draw_idle()
 
     def axes(self) -> Axes | None:
@@ -149,7 +149,13 @@ class PlotPanel(QWidget):
 
     # -- Slots and helpers -----------------------------------------------
 
-    def _set_layers(self, layers: Sequence[Layer]) -> None:
+    def set_layers(self, layers: Sequence[Layer]) -> None:
+        """Update the layer list only, without redrawing the figure.
+
+        Drawing a layer over a large table can take seconds, so the main
+        window calls this while the Plot tab is hidden, and
+        :meth:`show_plot` once it becomes visible.
+        """
         self._layers.clear()
         for number, layer in enumerate(layers, start=1):
             item = QListWidgetItem(f"{number}. {layer.label}")
