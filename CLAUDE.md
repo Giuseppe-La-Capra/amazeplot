@@ -156,3 +156,9 @@ Follow `docs/adding_operations.md`. In short:
   e.g. `Add round operation`.
 - Don't commit generated files, virtualenvs or data files (see
   `.gitignore`).
+- **Always have a pull request open for the work in progress, and keep
+  it updated.** Push every change to the PR's branch, and update its
+  description (summary and test plan) whenever the change grows, so the
+  PR always describes what it contains. Once a PR is merged, start the
+  next change on a fresh branch from the latest base branch and open a
+  new PR for it.
