@@ -80,7 +80,8 @@ Dependencies only point **downwards**: `gui → operations → core`. See
 - [x] Project skeleton: `pyproject.toml`, src layout, ruff, pytest, CI.
 - [x] Core model: `Parameter`, `Operation`, `MethodOperation`,
       registry, `DataSession` (undo/redo, observers).
-- [x] File I/O: CSV, TSV, JSON, Excel\*, Parquet\* (\* optional extras).
+- [x] File I/O: CSV, TSV, JSON, Excel\*, Parquet\* (\* optional extras),
+      and reading pickles after the user confirms.
 - [x] Code generation: export the session as a runnable script.
 - [x] 22 built-in operations in four categories (Select, Clean,
       Transform, Aggregate).
@@ -161,7 +162,8 @@ Dependencies only point **downwards**: `gui → operations → core`. See
 | Many history snapshots exhaust memory | Copy-on-write sharing (M1); history budget (M5). |
 | Generated code drifts from GUI behaviour | Execution and code come from the same arguments; contract tests over every operation and plot call. |
 | Plot layers break after a data step removes a column | The layer is kept and the Plot tab reports which layer failed; undo or remove the layer. |
-| `query` expressions are evaluated | They only run on the user's own data on their own machine; we never load pickles, and session files will store no executable content. |
+| `query` expressions are evaluated | They only run on the user's own data on their own machine, and session files will store no executable content. |
+| Pickle files can run code when opened | Reading them is opt-in per file: a warning dialog, with "No" as the default, must be confirmed first. Pickles are never written. |
 | pandas API changes | Pin a minimum version; CI runs the contract tests against the latest pandas. |
 
 ## 7. Definition of done (for every feature)

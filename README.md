@@ -4,7 +4,8 @@ amazeplot is a desktop application for exploring, cleaning, summarising
 and **plotting** tabular data with **pandas** and **matplotlib** through
 a graphical interface. It shows you the exact code behind every click.
 
-- Open CSV, TSV, JSON, Excel or Parquet files.
+- Open CSV, TSV, JSON, Excel, Parquet or pickle (`.pkl`) files. Pickles
+  can run code when opened, so amazeplot asks you to confirm first.
 - Apply 22 DataFrame operations from a searchable toolbox: filter,
   select, drop missing values, fill, deduplicate, rename, change types,
   sort, group and aggregate, pivot, correlate and more.
@@ -171,6 +172,10 @@ pip install -e ".[excel,parquet]"
   `libEGL.so.1`: the Qt system libraries from Linux step 1 are missing.
 - **Linux: `python3 -m venv` fails** saying `ensurepip` is not
   available: install `python3-venv` (Linux step 1).
+- **A pickle (`.pkl`) file asks for confirmation:** a pickle can run any
+  code on your computer when it is opened, so only open pickles you
+  created yourself or fully trust. amazeplot can open a pickle only if
+  it holds a pandas DataFrame, not some other Python object.
 - **Opening an `.xlsx` or `.parquet` file fails** with a message about a
   missing module: install the optional extras (see [Try it](#try-it)).
 

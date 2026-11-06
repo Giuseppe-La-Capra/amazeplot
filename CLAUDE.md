@@ -51,7 +51,12 @@ and `python -m pytest` must pass.
 6. **No global mutable state.** Pass `OperationRegistry` and
    `DataSession` in explicitly (dependency injection). There are no
    module-level singletons.
-7. **Never load pickles** or other formats that execute code when read.
+7. **Formats that execute code when read need explicit consent.**
+   Pickles (`.pkl`, `.pickle`) are listed in `UNSAFE_EXTENSIONS` in
+   `core/io.py`. Code that loads a user-chosen file must check
+   `executes_code_on_read(path)` and ask the user first, with "No" as
+   the default (see `MainWindow.open_file`). Never write pickles, and
+   never store pickled data in project or session files.
 
 ## Adding operations and plots
 

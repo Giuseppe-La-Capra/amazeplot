@@ -91,3 +91,45 @@ def test_clear_plot_and_undo(window, session, csv_path):
     assert window.plot_panel.layer_labels() == []
     window._undo_action.trigger()
     assert window.plot_panel.layer_labels() == ["1. Title"]
+
+
+class _Confirm:
+    """Stand-in for the yes/no message box that records each question."""
+
+    def __init__(self, answer):
+        self.answer = answer
+        self.questions = []
+
+    def __call__(self, title, message):
+        self.questions.append((title, message))
+        return self.answer
+
+
+@pytest.fixture
+def pickle_path(people, tmp_path):
+    path = tmp_path / "people.pkl"
+    people.to_pickle(path)
+    return path
+
+
+@pytest.mark.parametrize("answer", [True, False])
+def test_pickle_opens_only_after_confirmation(
+    qtbot, session, pickle_path, people, answer
+):
+    confirm = _Confirm(answer)
+    window = MainWindow(session, build_default_registry(), confirm=confirm)
+    qtbot.addWidget(window)
+
+    assert window.open_file(pickle_path) is answer
+    assert window.model.rowCount() == (len(people) if answer else 0)
+    [(title, message)] = confirm.questions
+    assert "pickle" in title.lower()
+    assert "people.pkl" in message
+
+
+def test_safe_formats_do_not_ask(qtbot, session, csv_path):
+    confirm = _Confirm(False)
+    window = MainWindow(session, build_default_registry(), confirm=confirm)
+    qtbot.addWidget(window)
+    assert window.open_file(csv_path)
+    assert confirm.questions == []

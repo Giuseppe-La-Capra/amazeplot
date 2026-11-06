@@ -7,6 +7,7 @@ the session notifies a change. It contains no pandas or plotting logic.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import Qt
@@ -28,6 +29,7 @@ from amazeplot.core.errors import AmazeplotError
 from amazeplot.core.io import (
     READABLE_EXTENSIONS,
     WRITABLE_EXTENSIONS,
+    executes_code_on_read,
     load_dataframe,
     save_dataframe,
 )
@@ -45,6 +47,16 @@ APP_NAME = "amazeplot"
 DATA_TAB = "Data"
 PLOT_TAB = "Plot"
 _DEFAULT_SIZE = (1280, 800)
+
+ConfirmCallback = Callable[[str, str], bool]
+"""Asks the user a yes/no question given a title and a message."""
+
+_UNSAFE_FILE_TITLE = "Open a pickle file?"
+_UNSAFE_FILE_MESSAGE = (
+    "Pickle files can run any code on your computer when they are "
+    "opened.\n\nOnly open {name} if you created it yourself or fully "
+    "trust where it came from. Open it anyway?"
+)
 
 
 def _file_filter(extensions: tuple[str, ...]) -> str:
@@ -64,6 +76,9 @@ class MainWindow(QMainWindow):
         The data operations and plot calls offered in the toolbox.
     parent : QWidget, optional
         Parent widget.
+    confirm : callable, optional
+        Asks the user a yes/no question, e.g. before opening a file that
+        can run code. Defaults to a message box; tests pass a stub.
     """
 
     def __init__(
@@ -71,8 +86,11 @@ class MainWindow(QMainWindow):
         session: DataSession,
         registry: ActionRegistry,
         parent: QWidget | None = None,
+        *,
+        confirm: ConfirmCallback | None = None,
     ) -> None:
         super().__init__(parent)
+        self._confirm = confirm or self._ask_yes_no
         self._session = session
 
         self._model = DataFrameModel(self)
@@ -117,11 +135,19 @@ class MainWindow(QMainWindow):
     def open_file(self, path: Path | str) -> bool:
         """Load ``path`` into the session; report errors to the user.
 
+        Files that can run code when loaded (pickles) are only opened
+        after the user confirms.
+
         Returns
         -------
         bool
             Whether the file was loaded.
         """
+        if executes_code_on_read(path) and not self._confirm(
+            _UNSAFE_FILE_TITLE,
+            _UNSAFE_FILE_MESSAGE.format(name=Path(path).name),
+        ):
+            return False
         try:
             frame, source = load_dataframe(path)
         except AmazeplotError as exc:
@@ -295,6 +321,17 @@ class MainWindow(QMainWindow):
             )
         except OSError as exc:
             self._show_error("Cannot export script", str(exc))
+
+    def _ask_yes_no(self, title: str, message: str) -> bool:
+        """Ask a yes/no question; the safe answer, No, is the default."""
+        answer = QMessageBox.warning(
+            self,
+            title,
+            message,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        return answer == QMessageBox.StandardButton.Yes
 
     def _show_error(self, title: str, message: str) -> None:
         QMessageBox.warning(self, title, message)

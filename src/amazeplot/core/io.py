@@ -4,12 +4,16 @@ Supported formats are chosen by file extension. Each reader is described
 by a :class:`DataSource`, which can both load the data and emit the
 equivalent ``pandas`` call for the exported script.
 
-Pickle files are intentionally not supported: unpickling an untrusted
-file can execute arbitrary code.
+Pickle files (``.pkl``, ``.pickle``) can be read, but unpickling can
+run arbitrary code hidden in the file. They are listed in
+:data:`UNSAFE_EXTENSIONS`, and callers must get the user's explicit
+consent (see :func:`executes_code_on_read`) before loading one. Pickles
+are never written.
 """
 
 from __future__ import annotations
 
+import pickle
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,6 +32,8 @@ _READERS: Mapping[str, tuple[str, Mapping[str, Any]]] = MappingProxyType(
         ".json": ("read_json", {}),
         ".xlsx": ("read_excel", {}),
         ".parquet": ("read_parquet", {}),
+        ".pkl": ("read_pickle", {}),
+        ".pickle": ("read_pickle", {}),
     }
 )
 
@@ -43,6 +49,19 @@ _WRITERS: Mapping[str, tuple[str, Mapping[str, Any]]] = MappingProxyType(
 
 READABLE_EXTENSIONS: tuple[str, ...] = tuple(_READERS)
 """File extensions that :func:`load_dataframe` understands."""
+
+UNSAFE_EXTENSIONS: frozenset[str] = frozenset({".pkl", ".pickle"})
+"""Readable extensions whose loading can execute code from the file."""
+
+_READ_ERRORS = (
+    OSError,
+    ValueError,
+    ImportError,
+    EOFError,
+    pickle.UnpicklingError,
+    # Unpickling a class that no longer exists in its module.
+    AttributeError,
+)
 
 WRITABLE_EXTENSIONS: tuple[str, ...] = tuple(_WRITERS)
 """File extensions that :func:`save_dataframe` understands."""
@@ -72,18 +91,34 @@ class DataSource:
         Raises
         ------
         DataIOError
-            If the file is missing, malformed, or needs an optional
-            dependency that is not installed.
+            If the file is missing, malformed, needs an optional
+            dependency that is not installed, or (for pickles) holds
+            something other than a DataFrame.
         """
         try:
-            return getattr(pd, self.reader)(self.path, **self.kwargs)
-        except (OSError, ValueError, ImportError) as exc:
+            data = getattr(pd, self.reader)(self.path, **self.kwargs)
+        except _READ_ERRORS as exc:
             raise DataIOError(f"Cannot read {self.path}: {exc}") from exc
+        if not isinstance(data, pd.DataFrame):
+            # Only pickles can hold arbitrary objects (a Series, a list).
+            raise DataIOError(
+                f"{self.path} contains a {type(data).__name__}, "
+                "not a DataFrame."
+            )
+        return data
 
     def to_code(self, variable: str = "df") -> str:
         """Return the ``pandas`` statement that loads this source."""
         arguments = format_call_arguments(str(self.path), **self.kwargs)
         return f"{variable} = pd.{self.reader}({arguments})"
+
+
+def executes_code_on_read(path: Path | str) -> bool:
+    """Return whether loading ``path`` can run code stored in the file.
+
+    The GUI asks the user for confirmation before loading such a file.
+    """
+    return Path(path).suffix.lower() in UNSAFE_EXTENSIONS
 
 
 def source_for_path(path: Path | str) -> DataSource:
@@ -107,6 +142,9 @@ def source_for_path(path: Path | str) -> DataSource:
 
 def load_dataframe(path: Path | str) -> tuple[pd.DataFrame, DataSource]:
     """Read ``path`` and return the data together with its source.
+
+    This does not ask for consent: check :func:`executes_code_on_read`
+    first when ``path`` comes from the user.
 
     Raises
     ------
