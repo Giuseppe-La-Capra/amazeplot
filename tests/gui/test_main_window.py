@@ -182,3 +182,19 @@ def test_opening_a_file_starts_at_the_first_row(window, tmp_path):
     window.data_view.next_page()
     window.open_file(big)
     assert window.data_view.window.start == 0
+
+
+def test_complex_text_is_converted_on_open(window, session, tmp_path):
+    path = tmp_path / "signal.csv"
+    frame = pd.DataFrame({"z": [1 + 2j, 3 - 4j], "label": ["a", "b"]})
+    frame.to_csv(path, index=False)  # Stored as text "(1+2j)".
+
+    window.open_file(path)
+    assert session.frame["z"].dtype == "complex128"
+    assert session.frame["label"].dtype != "complex128"
+    assert window.history_panel.step_labels() == ["1. Change column type"]
+    assert "'complex128'" in window.history_panel.script()
+    assert "complex numbers" in window.status_message()
+
+    window._undo_action.trigger()
+    assert session.frame["z"].dtype != "complex128"  # Text kept on undo.

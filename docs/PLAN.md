@@ -99,8 +99,14 @@ Dependencies only point **downwards**: `gui → operations → core`. See
 - [ ] Preview of the result (first 50 rows) inside the operation dialog.
 - [ ] Column context menu in the table header (sort, rename, drop,
       change type, fill missing) that reuses the same operations.
-- [ ] Column statistics side panel (dtype, missing count, unique count,
-      min/max, histogram).
+- [x] Info panel under the table: dtype, counts, unique values, memory
+      and statistics of the selected column; label and values of the
+      selected row.
+- [ ] Histogram of the selected column in the info panel.
+- [x] Multi-level (MultiIndex) labels shown readably; Flatten column
+      names operation.
+- [x] Complex numbers: display, `complex128` column type, and automatic
+      conversion of complex numbers stored as text in CSV files.
 - [ ] "Recent files" menu and remembered window layout (`QSettings`).
 - [ ] Clicking a history step jumps to that point (truncating redo).
 - [ ] Options in the Open dialog for the reader (separator, encoding,

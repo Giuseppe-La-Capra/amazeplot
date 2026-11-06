@@ -6,7 +6,15 @@ a graphical interface. It shows you the exact code behind every click.
 
 - Open CSV, TSV, JSON, Excel, Parquet or pickle (`.pkl`) files. Pickles
   can run code when opened, so amazeplot asks you to confirm first.
-- Apply 22 DataFrame operations from a searchable toolbox: filter,
+- Multi-level row and column labels (pandas MultiIndex) are shown as
+  `7570.0 | 0 | 0`; **Flatten column names** and **Reset index** turn
+  them into simple columns.
+- Complex numbers are supported. CSV files store them as text such as
+  `(1+2j)`, so amazeplot converts those columns back when opening the
+  file (an undoable step).
+- An info panel under the table shows the type and statistics of the
+  selected column and every value of the selected row.
+- Apply 23 DataFrame operations from a searchable toolbox: filter,
   select, drop missing values, fill, deduplicate, rename, change types,
   sort, group and aggregate, pivot, correlate and more.
 - Plot anything in the table with 13 matplotlib plot types: line,
@@ -211,6 +219,14 @@ Each tool's form also has a **Help** button that opens its page.
    row (**Rows from**), the **Rows per page** (100 to 100,000), or move
    with **Previous** and **Next**. Tools always work on the whole table,
    not just the visible page.
+
+   Click any cell to see details in the **info panel** under the table
+   (drag its top edge to resize it):
+   - **Column**: name, type (dtype), number of values and missing values,
+     unique values, memory, and statistics such as minimum, maximum and
+     mean, computed over the whole table.
+   - **Row**: position, label (with the level names of a multi-level
+     index) and every value in full, handy when a column is too narrow.
 2. Double-click an action in the **Toolbox** on the left, fill in the
    form and press **OK**.
    - The *Select*, *Clean*, *Transform* and *Aggregate* categories change

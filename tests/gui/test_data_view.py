@@ -69,3 +69,41 @@ def test_no_data(view):
     view.set_frame(None)
     assert view.model.rowCount() == 0
     assert view.range_text() == ""
+
+
+def test_info_panel_describes_selected_cell(view):
+    assert view.info_panel.column_fields() == {}  # Only the hint so far.
+    view.next_page()
+    view.select_cell(5, 0)
+    column = view.info_panel.column_fields()
+    assert column["Name"] == "n"
+    assert column["Type (dtype)"] == "int64"
+    assert column["Maximum"] == "2499"  # Whole table, not just the page.
+    row = view.info_panel.row_fields()
+    assert row["Position"] == "1,006 of 2,500"
+    assert row["n"] == "1005"
+
+
+def test_info_panel_clears_when_the_page_changes(view):
+    view.select_cell(0, 0)
+    assert view.info_panel.row_fields()
+    view.next_page()
+    assert view.info_panel.row_fields() == {}
+
+
+def test_columns_fit_their_contents_once(qtbot):
+    view = DataView()
+    qtbot.addWidget(view)
+    view.set_frame(pd.DataFrame({"short": [1], "long": ["x" * 30]}))
+    assert view.column_width(1) > view.column_width(0)
+
+    view.set_column_width(1, 40)
+    view.set_frame(pd.DataFrame({"short": [2], "long": ["y" * 30]}))
+    assert view.column_width(1) == 40  # Same columns: manual width kept.
+
+
+def test_very_long_values_are_capped(qtbot):
+    view = DataView()
+    qtbot.addWidget(view)
+    view.set_frame(pd.DataFrame({"long": ["x" * 500]}))
+    assert view.column_width(0) <= 320

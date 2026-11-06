@@ -22,6 +22,9 @@ src/amazeplot/
 │   ├── session.py     DataSession, Step: state, history, undo/redo
 │   ├── io.py          DataSource, load_dataframe, save_dataframe
 │   ├── examples.py    built-in example data (Help → Open example data)
+│   ├── formatting.py  display text for values and (multi-level) labels
+│   ├── inference.py   finds complex numbers stored as text (CSV)
+│   ├── summary.py     column and row facts for the info panel
 │   └── codegen.py     generate_script: session -> runnable Python
 ├── operations/      # The catalogue of built-in actions (data only).
 │   ├── select.py, clean.py, transform.py, aggregate.py  (pandas)
@@ -30,7 +33,8 @@ src/amazeplot/
 └── gui/             # View/controller layer. PySide6.
     ├── app.py               main(): wiring + exception hook
     ├── main_window.py       MainWindow: controller, tabs, menus, docks
-    ├── data_view.py         Data tab: row-navigation bar + table
+    ├── data_view.py         Data tab: navigation bar, table, info panel
+    ├── info_panel.py        selected column and row details
     ├── row_window.py        RowWindow: which rows are shown (Qt-free)
     ├── dataframe_model.py   DataFrameModel: QAbstractTableModel
     ├── plot_panel.py        matplotlib canvas, toolbar, layer list
@@ -170,6 +174,29 @@ The GUI never hands a whole DataFrame to Qt:
 
 Operations always run on the whole DataFrame; only the display is
 sliced.
+
+### Display text, labels and types
+
+`core/formatting.py` is the one place that turns values and labels into
+text: numpy scalars print like Python values (`7570.0`, not
+`np.float64(7570.0)`), complex numbers without parentheses, and the
+levels of a MultiIndex label are joined with ` | `. The table, the
+parameter editors and the info panel all use it.
+
+When a file is opened, `core/inference.py` looks for text columns that
+hold complex numbers (CSV writes them as `(1+2j)`). The main window
+converts each one with an ordinary "Change column type" step, so it is
+visible in the history, undoable, and part of the exported script.
+
+### Info panel
+
+Under the table, `InfoPanel` shows two summaries from
+`core/summary.py` for the selected cell: its column (dtype, counts,
+unique values, memory, and type-specific statistics) and its row
+(position, label with level names, every value). Statistics are computed
+over the whole DataFrame and cached per column until the data changes.
+The table only sizes columns to their contents when the columns change,
+for the first 50 columns, so manual widths survive paging.
 
 ### Help
 

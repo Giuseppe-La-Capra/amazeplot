@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from amazeplot.core.formatting import format_label
 from amazeplot.core.parameters import Parameter, ParameterKind
 
 _INT_LIMIT = 2**31 - 1
@@ -88,7 +89,7 @@ class ColumnEditor(ParameterEditor):
         if not self.parameter.required:
             self._combo.addItem(_NO_SELECTION_TEXT, None)
         for column in columns:
-            self._combo.addItem(str(column), column)
+            self._combo.addItem(format_label(column), column)
         index = self._combo.findData(self.parameter.default)
         self._combo.setCurrentIndex(max(index, 0))
         self._combo.currentIndexChanged.connect(self.value_changed)
@@ -114,7 +115,7 @@ class ColumnsEditor(ParameterEditor):
         self._list.setMaximumHeight(_COLUMNS_LIST_HEIGHT)
         selected = self.parameter.default or []
         for column in columns:
-            item = QListWidgetItem(str(column))
+            item = QListWidgetItem(format_label(column))
             item.setData(Qt.ItemDataRole.UserRole, column)
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
             checked = column in selected

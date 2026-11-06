@@ -34,29 +34,33 @@ and `python -m pytest` must pass.
    - Never import `matplotlib.pyplot` in the package: it holds global
      state. Use `matplotlib.figure.Figure`/`Axes` in the core and
      `backend_qtagg` in the GUI. Only *generated scripts* use pyplot.
-2. **Never hand a whole DataFrame to Qt.** The Data tab shows one
+2. **Format through `core/formatting.py`.** Never `str()` a cell value
+   or label for display: use `format_value` and `format_label`, so
+   numpy scalars, complex numbers and multi-level labels look the same
+   everywhere.
+3. **Never hand a whole DataFrame to Qt.** The Data tab shows one
    `RowWindow` slice (`gui/row_window.py`, `gui/data_view.py`), and
    expensive views (the figure) are only redrawn while visible. Measure
    with a table of a few million rows before adding a view that touches
    every row.
-3. **The `DataSession` is the single source of truth.** That includes
+4. **The `DataSession` is the single source of truth.** That includes
    the plot layers. Views never keep their own copy of the state. They
    subscribe and redraw in `refresh()`. Every change pushes an immutable
    snapshot, so undo/redo must keep working for any new kind of state.
-4. **Actions are declarative.** Each one is described by `Parameter`
+5. **Actions are declarative.** Each one is described by `Parameter`
    metadata, and the GUI builds its forms from that metadata. Never
    write a dialog by hand for a single action.
-5. **Execution and code generation share one source.** For
+6. **Execution and code generation share one source.** For
    `MethodOperation` both come from `build_kwargs`, and for `AxesCall`
    both come from `build_arguments` (with `ColumnRef` placeholders).
    Custom subclasses must keep `_execute`/`_draw` and `to_code` exactly
    equivalent.
-6. **Never mutate the input DataFrame.** Operations return a new frame,
+7. **Never mutate the input DataFrame.** Operations return a new frame,
    plot calls only read it, and `inplace=True` is forbidden.
-7. **No global mutable state.** Pass `OperationRegistry` and
+8. **No global mutable state.** Pass `ActionRegistry` and
    `DataSession` in explicitly (dependency injection). There are no
    module-level singletons.
-8. **Formats that execute code when read need explicit consent.**
+9. **Formats that execute code when read need explicit consent.**
    Pickles (`.pkl`, `.pickle`) are listed in `UNSAFE_EXTENSIONS` in
    `core/io.py`. Code that loads a user-chosen file must check
    `executes_code_on_read(path)` and ask the user first, with "No" as
@@ -152,3 +156,9 @@ Follow `docs/adding_operations.md`. In short:
   e.g. `Add round operation`.
 - Don't commit generated files, virtualenvs or data files (see
   `.gitignore`).
+- **Always have a pull request open for the work in progress, and keep
+  it updated.** Push every change to the PR's branch, and update its
+  description (summary and test plan) whenever the change grows, so the
+  PR always describes what it contains. Once a PR is merged, start the
+  next change on a fresh branch from the latest base branch and open a
+  new PR for it.

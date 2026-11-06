@@ -17,6 +17,7 @@ DTYPES = (
     "string",
     "category",
     "datetime64[ns]",
+    "complex128",
     "object",
 )
 """Target types offered by :data:`ASTYPE`."""
