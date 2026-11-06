@@ -140,6 +140,29 @@ Install Python 3 from [python.org](https://www.python.org/downloads/)
 or Homebrew, then follow the Linux steps 2 to 5. No extra system
 libraries are needed.
 
+### Updating
+
+`pip install -e .` installs amazeplot in *editable* mode: Python runs
+the code straight from your `amazeplot` folder. After pulling new
+commits you normally **don't need to reinstall**. Pull, then restart
+amazeplot:
+
+```bash
+git pull
+```
+
+The exception is an update that adds or changes dependencies, which are
+listed in `pyproject.toml`. Then run the install again, with the
+virtual environment active. It's quick and safe to run after any
+update, so if in doubt, run it:
+
+```bash
+pip install -e .
+```
+
+If you installed the optional extras, include them again:
+`pip install -e ".[excel,parquet]"`.
+
 ### Try it
 
 With the virtual environment active, `python -m amazeplot` works the
