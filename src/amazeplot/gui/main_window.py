@@ -25,8 +25,10 @@ from PySide6.QtWidgets import (
 from amazeplot import __version__
 from amazeplot.core.action import Action, Params
 from amazeplot.core.codegen import generate_script
-from amazeplot.core.errors import AmazeplotError
+from amazeplot.core.errors import ActionError, AmazeplotError
 from amazeplot.core.examples import write_example_data
+from amazeplot.core.formatting import format_label
+from amazeplot.core.inference import COMPLEX_DTYPE, complex_text_columns
 from amazeplot.core.io import (
     READABLE_EXTENSIONS,
     WRITABLE_EXTENSIONS,
@@ -45,6 +47,7 @@ from amazeplot.gui.help_pages import build_help_pages
 from amazeplot.gui.help_window import HelpWindow
 from amazeplot.gui.history_panel import HistoryPanel
 from amazeplot.gui.plot_panel import PlotPanel
+from amazeplot.operations.clean import ASTYPE
 
 APP_NAME = "amazeplot"
 DATA_TAB = "Data"
@@ -164,7 +167,12 @@ class MainWindow(QMainWindow):
             return False
         self._session.load(frame, source)
         self.data_view.go_to_row(1)
+        self._convert_complex_text()
         return True
+
+    def status_message(self) -> str:
+        """Return the temporary status-bar message (useful for tests)."""
+        return self.statusBar().currentMessage()
 
     def show_tab(self, title: str) -> None:
         """Make the central tab called ``title`` visible.
@@ -371,6 +379,31 @@ class MainWindow(QMainWindow):
             self._tabs.setCurrentWidget(tab)
 
         return callback
+
+    def _convert_complex_text(self) -> None:
+        """Turn text columns holding complex numbers into complex numbers.
+
+        CSV stores complex numbers as text such as ``(1+2j)``. Each such
+        column gets an ordinary "Change column type" step, so it shows
+        in the history, can be undone, and is in the exported script.
+        """
+        frame = self._session.frame
+        if frame is None:
+            return
+        converted = []
+        for column in complex_text_columns(frame):
+            try:
+                self._session.apply(
+                    ASTYPE, {"column": column, "dtype": COMPLEX_DTYPE}
+                )
+            except ActionError:
+                continue  # A value further down is not a number: keep text.
+            converted.append(format_label(column))
+        if converted:
+            self.statusBar().showMessage(
+                f"Converted {', '.join(converted)} to complex numbers. "
+                "Use Edit > Undo to keep the text instead."
+            )
 
     def _refresh_plot(self) -> None:
         """Redraw the figure now if it is visible, otherwise later.

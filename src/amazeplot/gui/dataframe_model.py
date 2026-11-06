@@ -14,26 +14,18 @@ from PySide6.QtCore import (
 )
 from PySide6.QtGui import QBrush, QColor
 
-AnyIndex = QModelIndex | QPersistentModelIndex
+from amazeplot.core.formatting import (
+    describe_label,
+    format_label,
+    format_value,
+    is_missing,
+)
 
-MISSING_TEXT = "NaN"
-"""Text displayed for missing values."""
+AnyIndex = QModelIndex | QPersistentModelIndex
 
 _MISSING_COLOR = QColor(150, 150, 150)
 _NUMBER_ALIGNMENT = Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
 _TEXT_ALIGNMENT = Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-
-
-def is_missing(value: Any) -> bool:
-    """Return whether a cell value is a scalar missing value."""
-    return ptypes.is_scalar(value) and bool(pd.isna(value))
-
-
-def format_value(value: Any) -> str:
-    """Return the text shown in a cell for ``value``."""
-    if is_missing(value):
-        return MISSING_TEXT
-    return str(value)
 
 
 class DataFrameModel(QAbstractTableModel):
@@ -100,13 +92,20 @@ class DataFrameModel(QAbstractTableModel):
         orientation: Qt.Orientation,
         role: int = Qt.ItemDataRole.DisplayRole,
     ) -> Any:
-        """Return column labels (with dtype tooltips) or row labels."""
+        """Return row/column labels; tooltips add level names and dtype.
+
+        Multi-level labels are shown as ``7570.0 | 0 | 0``; the tooltip
+        names the levels, e.g. ``freq=7570.0, i=0, j=0``.
+        """
         horizontal = orientation == Qt.Orientation.Horizontal
+        axis = self._frame.columns if horizontal else self._frame.index
         if role == Qt.ItemDataRole.DisplayRole:
-            labels = self._frame.columns if horizontal else self._frame.index
-            return str(labels[section])
-        if role == Qt.ItemDataRole.ToolTipRole and horizontal:
-            return f"dtype: {self._frame.dtypes.iloc[section]}"
+            return format_label(axis[section])
+        if role == Qt.ItemDataRole.ToolTipRole:
+            tooltip = describe_label(axis[section], list(axis.names))
+            if horizontal:
+                tooltip += f"\ndtype: {self._frame.dtypes.iloc[section]}"
+            return tooltip
         return None
 
     def _cell(self, index: AnyIndex) -> Any:

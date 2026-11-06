@@ -46,3 +46,25 @@ def test_operation_does_not_mutate_input(operation: Operation, people):
     before = people.copy()
     operation.apply(people, operation.example)
     pd.testing.assert_frame_equal(people, before)
+
+
+def test_flatten_columns_joins_levels():
+    from amazeplot.operations.transform import FLATTEN_COLUMNS
+
+    columns = pd.MultiIndex.from_tuples([("price", "mean"), ("price", 2)])
+    frame = pd.DataFrame([[1.0, 2.0]], columns=columns)
+    result = FLATTEN_COLUMNS.apply(frame, {"sep": "_"})
+    assert list(result.columns) == ["price_mean", "price_2"]
+
+    namespace = {"df": frame.copy()}
+    exec(FLATTEN_COLUMNS.to_code({"sep": "_"}), namespace)
+    pd.testing.assert_frame_equal(namespace["df"], result)
+
+
+def test_astype_complex_parses_text():
+    from amazeplot.operations.clean import ASTYPE
+
+    frame = pd.DataFrame({"z": ["(1+2j)", None, "3-4j"]})
+    result = ASTYPE.apply(frame, {"column": "z", "dtype": "complex128"})
+    assert result["z"].dtype == "complex128"
+    assert result["z"].iloc[2] == 3 - 4j
